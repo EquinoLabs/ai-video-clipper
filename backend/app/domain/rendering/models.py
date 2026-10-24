@@ -43,6 +43,8 @@ class CaptionConfig(BaseModel):
     font_weight: str = "Bold"
     text_color: str = "&H00FFFFFF"  # White in ASS (&HAABBGGRR)
     highlight_color: Optional[str] = "&H0000FFFF"  # Yellow in ASS
+    border_style: int = Field(default=1, description="ASS BorderStyle: 1=Outline+Shadow, 3=Opaque Box")
+    box_color: Optional[str] = Field(default="&H80000000", description="ASS box background color if border_style=3")
     outline: Optional[CaptionOutline] = Field(default_factory=CaptionOutline)
     shadow: Optional[CaptionShadow] = Field(default_factory=CaptionShadow)
     alignment: int = Field(default=2, description="ASS alignment: 2=bottom-center")
@@ -50,6 +52,7 @@ class CaptionConfig(BaseModel):
     max_words_per_line: int = Field(default=5, ge=1, le=12)
     max_lines_per_cue: int = Field(default=2, ge=1, le=3)
     timing_mode: Literal["phrase", "word"] = "phrase"
+    uppercase: bool = Field(default=False, description="Whether to transform caption text to uppercase")
 
 
 class OutputConfig(BaseModel):

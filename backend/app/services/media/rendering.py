@@ -15,6 +15,7 @@ from app.domain.rendering.models import (
     RenderValidationResult,
 )
 from app.domain.transcript.models import TranscriptSegment
+from app.services.media.caption_styles import resolve_caption_config
 from app.services.media.ffmpeg import check_ffmpeg_installed
 from app.services.media.probing import probe_media_file
 from app.services.media.subtitles import write_subtitles_for_candidate
@@ -209,13 +210,18 @@ def render_candidate_clip(
     if burn_subtitles and transcript_segments:
         ass_subtitle_file = out_path.with_suffix(".ass")
         srt_subtitle_file = out_path.with_suffix(".srt")
+        resolved_caption_cfg = resolve_caption_config(
+            style_id=caption_config.preset_id if caption_config else None,
+            canvas_width=out_cfg.width,
+            overrides=caption_config,
+        )
         write_subtitles_for_candidate(
             candidate_start_seconds=candidate_start_seconds,
             candidate_end_seconds=candidate_end_seconds,
             transcript_segments=transcript_segments,
             output_ass_path=ass_subtitle_file,
             output_srt_path=srt_subtitle_file,
-            config=caption_config or CaptionConfig(),
+            config=resolved_caption_cfg,
             canvas_width=out_cfg.width,
             canvas_height=out_cfg.height,
         )

@@ -23,6 +23,7 @@ if str(backend_dir) not in sys.path:
 from app.api.v1.schemas.candidates import EditorialGoal
 from app.core.config import get_settings
 from app.core.logging import setup_logging
+from app.services.media.caption_styles import get_caption_style, list_caption_styles
 from app.services.pipeline.batch_runner import BatchSummary, process_batch_items
 from app.services.pipeline.orchestrator import OrchestratorConfig
 from app.services.storage.staging import discover_video_files_in_folder, is_supported_video_file
@@ -61,6 +62,14 @@ def main():
         "--final",
         action="store_true",
         help="Render final burned subtitle deliverables in addition to clean 9:16 vertical masters.",
+    )
+    available_styles = [s.style_id for s in list_caption_styles()]
+    parser.add_argument(
+        "--caption-style",
+        type=str,
+        default="modern-box",
+        choices=available_styles,
+        help="Caption visual preset style to burn into final deliverables (default: modern-box).",
     )
     parser.add_argument(
         "--goal",
@@ -157,11 +166,15 @@ def main():
         print(f" Reuse Transcript   : {args.transcript}")
     print(f" Discovered Files   : {len(video_files)}")
     print(f" Final Deliverables : {args.final} (burned subtitles: {args.final})")
+    if args.final:
+        selected_style = get_caption_style(args.caption_style)
+        print(f" Caption Style      : {selected_style.display_name} ({selected_style.style_id})")
     print(f" Editorial Goal     : {args.goal}")
     print(f" LLM Provider       : {effective_provider} ({effective_model})")
     print(f" Staging Directory  : {args.input_root}")
     print("=" * 60 + "\n")
 
+    resolved_caption_preset = get_caption_style(args.caption_style)
     config = OrchestratorConfig(
         pipeline_mode="full",
         editorial_goal=EditorialGoal(args.goal),
@@ -169,6 +182,7 @@ def main():
         llm_model=effective_model,
         render_clean_masters=True,
         render_final_deliverables=args.final,
+        caption_config=resolved_caption_preset.config,
     )
 
     # 2. Execute sequential batch processing

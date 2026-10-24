@@ -59,3 +59,12 @@ class ReviewDetailResponse(BaseModel):
     """Response containing full review data for a run."""
     summary: ReviewRunSummary
     candidates: List[ReviewCandidateItem]
+
+
+class CaptionStyleResponse(BaseModel):
+    """API schema for caption style preset definition and browser preview styling."""
+    style_id: str
+    display_name: str
+    description: str
+    sample_text: str
+    preview_css: dict

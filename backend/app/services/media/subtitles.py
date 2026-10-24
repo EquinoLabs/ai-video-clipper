@@ -107,6 +107,21 @@ def generate_ass_subtitle_content(
     margin_v = int(canvas_height * (1.0 - config.position.y))
     margin_h = int(canvas_width * 0.08)  # 8% safe area margin
 
+    # BorderStyle: 1 = Outline + Drop Shadow; 3 = Opaque/Translucent Background Box
+    border_style = getattr(config, "border_style", 1)
+    outline_width = config.outline.width if config.outline else 0.0
+    shadow_offset = config.shadow.offset_x if config.shadow else 0.0
+
+    if border_style == 3:
+        # In BorderStyle 3:
+        # OutlineColour acts as the box color and Outline width sets the box padding
+        outline_color = getattr(config, "box_color", None) or (config.outline.color if config.outline else "&H80000000")
+        back_color = outline_color
+        shadow_offset = 0.0
+    else:
+        outline_color = config.outline.color if config.outline else "&H00000000"
+        back_color = config.shadow.color if config.shadow else "&H80000000"
+
     # ASS Header
     lines = [
         "[Script Info]",
@@ -119,8 +134,8 @@ def generate_ass_subtitle_content(
         "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, "
         "Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
         "Alignment, MarginL, MarginR, MarginV, Encoding",
-        f"Style: Default,{config.font_family},{config.font_size},{config.text_color},&H0000FFFF,{config.outline.color if config.outline else '&H00000000'},{config.shadow.color if config.shadow else '&H80000000'},"
-        f"-1,0,0,0,100,100,0,0,1,{config.outline.width if config.outline else 0},{config.shadow.offset_x if config.shadow else 0},{config.alignment},{margin_h},{margin_h},{margin_v},1",
+        f"Style: Default,{config.font_family},{config.font_size},{config.text_color},{config.highlight_color or '&H0000FFFF'},{outline_color},{back_color},"
+        f"-1,0,0,0,100,100,0,0,{border_style},{outline_width},{shadow_offset},{config.alignment},{margin_h},{margin_h},{margin_v},1",
         "",
         "[Events]",
         "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
@@ -129,7 +144,8 @@ def generate_ass_subtitle_content(
     for cue in cues:
         start_fmt = format_ass_time(cue.start_seconds)
         end_fmt = format_ass_time(cue.end_seconds)
-        clean_text = escape_ass_text(cue.text)
+        text_val = cue.text.upper() if getattr(config, "uppercase", False) else cue.text
+        clean_text = escape_ass_text(text_val)
         lines.append(f"Dialogue: 0,{start_fmt},{end_fmt},Default,,0,0,0,,{clean_text}")
 
     return "\n".join(lines) + "\n"

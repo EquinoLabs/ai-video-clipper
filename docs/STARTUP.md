@@ -1,6 +1,9 @@
 # AI Video Clipper — Startup & Operator Guide
 
-This document is the authoritative startup and developer operations manual for **AI Video Clipper**. It details system prerequisites, environment setup, CLI processing pipelines, API server execution, the local review web application, test suites, and troubleshooting procedures.
+> [!TIP]
+> **Canonical Runbook Available:** For the complete, authoritative operator runbook covering Stage 1–4, top-level CLI `app.py`, batch staging, transcript reuse, and all 7 caption styling presets, see [**docs/RUNBOOK.md**](RUNBOOK.md).
+
+This document is the historical startup and developer operations manual for **AI Video Clipper**. It details system prerequisites, environment setup, CLI processing pipelines, API server execution, the local review web application, test suites, and troubleshooting procedures.
 
 ---
 

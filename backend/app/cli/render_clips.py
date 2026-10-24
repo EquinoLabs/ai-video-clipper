@@ -10,6 +10,7 @@ from app.core.logging import setup_logging
 from app.domain.candidates.models import CandidateArtifact
 from app.domain.rendering.models import CaptionConfig, OutputConfig
 from app.domain.transcript.models import TranscriptArtifact
+from app.services.media.caption_styles import get_caption_style, list_caption_styles
 from app.services.media.rendering import render_candidate_clip
 
 logger = logging.getLogger("app.cli.render_clips")
@@ -49,6 +50,14 @@ def main():
         "--no-subtitles",
         action="store_true",
         help="Render video without burning subtitles",
+    )
+    style_choices = [s.style_id for s in list_caption_styles()]
+    parser.add_argument(
+        "--caption-style",
+        type=str,
+        default="modern-box",
+        choices=style_choices,
+        help="Caption visual preset style to burn into clips (default: modern-box).",
     )
     parser.add_argument(
         "--log-level",
@@ -109,6 +118,7 @@ def main():
         print(f"--> Rendering [{cand.id}]: {cand.hook[:50]}... ({cand.duration_seconds:.1f}s)")
 
         try:
+            caption_preset = get_caption_style(args.caption_style)
             val_res = render_candidate_clip(
                 source_video_path=source_path,
                 candidate_start_seconds=cand.start_seconds,
@@ -116,6 +126,7 @@ def main():
                 output_mp4_path=out_clip_path,
                 transcript_segments=transcript_segments,
                 burn_subtitles=not args.no_subtitles,
+                caption_config=caption_preset.config,
             )
 
             if val_res.is_valid:

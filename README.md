@@ -131,7 +131,7 @@ Ensure the following tools are installed on your machine:
 ## 4. Getting Started
 
 > [!TIP]
-> For a complete, step-by-step walkthrough covering CLI commands, the local review web application, test suites, and troubleshooting, see the [Startup & Operator Guide](docs/STARTUP.md).
+> For the complete, authoritative CLI reference, common operational workflows, transcript reuse, and caption style guide, see the [**Operator Runbook**](docs/RUNBOOK.md). For developer setup and architecture review, see the [Startup & Developer Guide](docs/STARTUP.md).
 
 ### Backend Setup
 

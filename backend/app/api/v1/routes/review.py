@@ -8,12 +8,14 @@ from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.responses import FileResponse
 
 from app.api.v1.schemas.review import (
+    CaptionStyleResponse,
     RenderedClipInfo,
     ReviewCandidateItem,
     ReviewDetailResponse,
     ReviewRunSummary,
 )
 from app.domain.candidates.models import CandidateArtifact
+from app.services.media.caption_styles import list_caption_styles
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +42,22 @@ def _sanitize_path(base_dir: Path, subpath: str) -> Path:
             detail="Access denied: path is outside the allowed directory.",
         )
     return target
+
+
+@router.get("/caption-styles", response_model=List[CaptionStyleResponse])
+async def get_caption_styles():
+    """List all available AutoShorts caption presets and preview CSS."""
+    styles = list_caption_styles()
+    return [
+        CaptionStyleResponse(
+            style_id=s.style_id,
+            display_name=s.display_name,
+            description=s.description,
+            sample_text=s.sample_text,
+            preview_css=s.preview_css,
+        )
+        for s in styles
+    ]
 
 
 @router.get("/runs", response_model=List[ReviewRunSummary])

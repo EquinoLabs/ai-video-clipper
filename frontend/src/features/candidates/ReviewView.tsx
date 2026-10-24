@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiClient } from '../../lib/api/client';
 import type {
+  CaptionStyleOption,
   ReviewCandidateItem,
   ReviewDetailResponse,
   ReviewRunSummary,
@@ -15,6 +16,10 @@ export function ReviewView() {
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<Set<string>>(new Set());
   const [expandedEvidenceIds, setExpandedEvidenceIds] = useState<Set<string>>(new Set());
 
+  // Caption Styling v1 state
+  const [captionStyles, setCaptionStyles] = useState<CaptionStyleOption[]>([]);
+  const [selectedStyleId, setSelectedStyleId] = useState<string>('modern-box');
+
   const [loadingRuns, setLoadingRuns] = useState<boolean>(true);
   const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,13 +27,17 @@ export function ReviewView() {
   // Load runs on mount
   useEffect(() => {
     let ignore = false;
-    async function fetchRuns() {
+    async function fetchRunsAndStyles() {
       setLoadingRuns(true);
       setError(null);
       try {
-        const availableRuns = await apiClient.listReviewRuns();
+        const [availableRuns, availableStyles] = await Promise.all([
+          apiClient.listReviewRuns(),
+          apiClient.listCaptionStyles().catch(() => [] as CaptionStyleOption[]),
+        ]);
         if (!ignore) {
           setRuns(availableRuns);
+          setCaptionStyles(availableStyles);
           if (availableRuns.length > 0) {
             setSelectedRunId(availableRuns[0].run_id);
           }
@@ -44,7 +53,7 @@ export function ReviewView() {
       }
     }
 
-    fetchRuns();
+    fetchRunsAndStyles();
     return () => {
       ignore = true;
     };
@@ -397,12 +406,54 @@ export function ReviewView() {
                       </p>
                       {activeCandidate && (
                         <code style={{ fontSize: '0.72rem', wordBreak: 'break-all', textAlign: 'left', marginTop: '0.5rem' }}>
-                          python -m app.cli.render_clips --run-dir outputs/{selectedRunId} --candidate-id {activeCandidate.id}
+                          python -m app.cli.render_clips --run-dir outputs/{selectedRunId} --candidate-id {activeCandidate.id} --caption-style {selectedStyleId}
                         </code>
                       )}
                     </div>
                   )}
                 </div>
+
+                {/* Caption Style Selector & Live Visual Badge */}
+                {captionStyles.length > 0 && (
+                  <div className="caption-style-section">
+                    <div className="caption-style-header">
+                      <label htmlFor="caption-style-select" className="caption-style-label">
+                        Caption Preset:
+                      </label>
+                      <span className="caption-style-desc">
+                        {captionStyles.find((s) => s.style_id === selectedStyleId)?.description}
+                      </span>
+                    </div>
+
+                    <div className="caption-style-controls">
+                      <select
+                        id="caption-style-select"
+                        className="caption-style-select"
+                        value={selectedStyleId}
+                        onChange={(e) => setSelectedStyleId(e.target.value)}
+                      >
+                        {captionStyles.map((style) => (
+                          <option key={style.style_id} value={style.style_id}>
+                            {style.display_name} {style.style_id === 'modern-box' ? '(Default)' : ''}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Live Style Visual Badge Preview */}
+                      {(() => {
+                        const current = captionStyles.find((s) => s.style_id === selectedStyleId);
+                        if (!current) return null;
+                        return (
+                          <div className="caption-preview-badge-container">
+                            <span className="caption-preview-badge" style={current.preview_css as React.CSSProperties}>
+                              {current.sample_text}
+                            </span>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
 
                 {/* Player Metadata & Actions */}
                 {activeCandidate && (
