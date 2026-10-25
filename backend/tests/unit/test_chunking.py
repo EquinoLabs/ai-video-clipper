@@ -1,8 +1,8 @@
 """Unit tests for transcript chunking with overlapping context."""
 
 import pytest
-from app.domain.transcript.models import TranscriptSegment
-from app.services.llm.chunking import chunk_transcript, format_segments_to_text
+from app.ai_clipper.domain.transcript.models import TranscriptSegment
+from app.ai_clipper.services.llm.chunking import chunk_transcript, format_segments_to_text
 
 
 def create_mock_segment(seg_id: int, start: float, duration: float, words_count: int) -> TranscriptSegment:

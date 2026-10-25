@@ -14,7 +14,7 @@ from app.api.v1.api import api_v1_router
 from app.api.v1.schemas.common import ErrorDetail, ErrorResponse
 from app.core.config import get_settings
 from app.core.logging import setup_logging
-from app.services.media.ffmpeg import check_ffmpeg_installed, check_ffprobe_installed
+from app.common.media.ffmpeg import check_ffmpeg_installed, check_ffprobe_installed
 
 logger = logging.getLogger("ai_video_clipper")
 

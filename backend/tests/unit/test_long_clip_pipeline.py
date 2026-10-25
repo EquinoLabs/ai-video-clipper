@@ -3,24 +3,24 @@
 from pathlib import Path
 import pytest
 
-from app.api.v1.schemas.candidates import EditorialGoal, GenerationSettings
-from app.domain.manifest.models import ClipMetadata, ManifestLongClipItem
-from app.domain.rendering.models import FramingConfig, OutputConfig, RenderValidationResult
-from app.domain.transcript.models import (
+from app.ai_clipper.domain.candidates.models import EditorialGoal, GenerationSettings
+from app.ai_clipper.domain.manifest.models import ClipMetadata, ManifestLongClipItem
+from app.ai_clipper.domain.rendering.models import FramingConfig, OutputConfig, RenderValidationResult
+from app.ai_clipper.domain.transcript.models import (
     SourceMediaMetadata,
     TranscriptArtifact,
     TranscriptionRunMetadata,
     TranscriptSegment,
     WordTiming,
 )
-from app.services.candidates.boundaries import (
+from app.ai_clipper.services.candidates.boundaries import (
     BoundaryRefinementConfig,
     refine_candidate_boundaries,
 )
-from app.services.llm.prompts import build_system_prompt, build_user_prompt
-from app.services.rendering.long_clip_renderer import render_long_clip_package
-from app.services.storage.output_manager import OutputManager
-from app.services.transcription.slicing import slice_transcript_for_long_clip
+from app.ai_clipper.services.llm.prompts import build_system_prompt, build_user_prompt
+from app.ai_clipper.services.rendering.long_clip_renderer import render_long_clip_package
+from app.ai_clipper.services.storage.output_manager import OutputManager
+from app.ai_clipper.services.transcription.slicing import slice_transcript_for_long_clip
 
 
 @pytest.fixture
@@ -269,7 +269,7 @@ def test_render_long_clip_package_flow(tmp_path: Path, sample_source_transcript,
             has_audio=True,
         )
 
-    monkeypatch.setattr("app.services.rendering.long_clip_renderer.render_candidate_clip", mock_render)
+    monkeypatch.setattr("app.ai_clipper.services.rendering.long_clip_renderer.render_candidate_clip", mock_render)
 
     clip_meta, manifest_item = render_long_clip_package(
         source_video_path=source_video,
@@ -322,9 +322,9 @@ def test_render_long_clip_package_flow(tmp_path: Path, sample_source_transcript,
 @pytest.mark.asyncio
 async def test_run_candidate_discovery_cli_long_mode_vs_short_mode(tmp_path: Path, sample_source_transcript, monkeypatch):
     """Test that discover_candidates CLI in long mode uses long settings, prompt, and refinement."""
-    from app.cli.discover_candidates import run_candidate_discovery
-    from app.services.llm.base import LLMProvider
-    from app.api.v1.schemas.candidates import LLMCandidateEvaluation, ScoreBreakdown, EvidenceItem, ConfidenceLabel
+    from app.ai_clipper.cli.discover_candidates import run_candidate_discovery
+    from app.ai_clipper.services.llm.base import LLMProvider
+    from app.ai_clipper.domain.candidates.models import LLMCandidateEvaluation, ScoreBreakdown, EvidenceItem, ConfidenceLabel
 
     t_file = tmp_path / "transcript.json"
     t_file.write_text(sample_source_transcript.model_dump_json(indent=2), encoding="utf-8")
@@ -364,7 +364,7 @@ async def test_run_candidate_discovery_cli_long_mode_vs_short_mode(tmp_path: Pat
                 )
             ]
 
-    monkeypatch.setattr("app.cli.discover_candidates.get_llm_provider", lambda **kwargs: MockDiscoveryProvider())
+    monkeypatch.setattr("app.ai_clipper.cli.discover_candidates.get_llm_provider", lambda **kwargs: MockDiscoveryProvider())
 
     # 1. Test short mode call
     short_out = tmp_path / "short_run"

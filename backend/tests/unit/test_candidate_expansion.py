@@ -1,7 +1,7 @@
 """Focused unit tests for Phase 2 Semantic Anchors + Bounded Window Expansion."""
 
 import pytest
-from app.api.v1.schemas.candidates import (
+from app.ai_clipper.domain.candidates.models import (
     AnchorType,
     ConfidenceLabel,
     EditorialGoal,
@@ -11,13 +11,13 @@ from app.api.v1.schemas.candidates import (
     ScoreBreakdown,
     ValidationReasonCode,
 )
-from app.domain.transcript.models import TranscriptSegment, WordTiming
-from app.services.candidates.expansion import (
+from app.ai_clipper.domain.transcript.models import TranscriptSegment, WordTiming
+from app.ai_clipper.services.candidates.expansion import (
     construct_bounded_candidate_windows,
     expand_anchors_to_candidates,
     validate_anchor,
 )
-from app.services.candidates.ranking import deduplicate_and_rank_candidates
+from app.ai_clipper.services.candidates.ranking import deduplicate_and_rank_candidates
 
 
 @pytest.fixture
@@ -368,7 +368,7 @@ def test_zero_accepted_shorts_cleanly_handled(default_scores):
 
 # 13. Regression coverage: long-clip discovery retains timestamp contract
 def test_long_clip_discovery_retains_timestamp_contract(default_scores):
-    from app.services.llm.prompts import build_system_prompt
+    from app.ai_clipper.services.llm.prompts import build_system_prompt
     long_prompt = build_system_prompt(EditorialGoal.OVERALL, GenerationSettings.for_long_clips(), is_long_clip=True)
     assert "STANDALONE CONVERSATIONAL ARCS" in long_prompt
     assert "start_seconds and end_seconds must be exact decimal seconds" in long_prompt
@@ -402,7 +402,7 @@ def test_forward_continuation_finds_resolution_endpoint(default_scores):
 
 # 15. Deduplication preserves distinct endpoints even with high IoU
 def test_deduplication_preserves_distinct_endpoints_with_high_iou(default_scores):
-    from app.api.v1.schemas.candidates import LLMCandidateEvaluation
+    from app.ai_clipper.domain.candidates.models import LLMCandidateEvaluation
     # Two candidates starting at 0.0s, one truncated at 12.0s (evaluated first with higher score),
     # one extending to 20.0s with full resolution (evaluated second).
     # IoU = 12.0 / 20.0 = 0.60 (normally suppressed under 0.50 threshold)

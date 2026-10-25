@@ -70,6 +70,7 @@ tmp/
 temp/
 input/
 outputs/
+animation_outputs/
 experimental_output/
 backend/outputs/
 *.mp4

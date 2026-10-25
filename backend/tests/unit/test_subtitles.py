@@ -1,9 +1,9 @@
 """Unit tests for subtitle cue generation, time formatting, and ASS/SRT script generation."""
 
 import pytest
-from app.domain.rendering.models import CaptionConfig
-from app.domain.transcript.models import TranscriptSegment, WordTiming
-from app.services.media.subtitles import (
+from app.ai_clipper.domain.rendering.models import CaptionConfig
+from app.ai_clipper.domain.transcript.models import TranscriptSegment, WordTiming
+from app.ai_clipper.services.media.subtitles import (
     build_clip_cues,
     format_ass_time,
     format_srt_time,

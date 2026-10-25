@@ -5,11 +5,11 @@ from pathlib import Path
 from pydantic_settings import SettingsConfigDict
 import pytest
 
-from app.api.v1.schemas.candidates import EditorialGoal
+from app.ai_clipper.domain.candidates.models import EditorialGoal
 from app.core.config import Settings
-from app.services.llm.factory import get_llm_provider
-from app.services.llm.ollama_adapter import OllamaProvider
-from app.services.pipeline.orchestrator import OrchestratorConfig
+from app.ai_clipper.services.llm.factory import get_llm_provider
+from app.ai_clipper.services.llm.ollama_adapter import OllamaProvider
+from app.ai_clipper.services.pipeline.orchestrator import OrchestratorConfig
 
 
 def test_default_config_values():

@@ -6,17 +6,17 @@ from unittest.mock import AsyncMock, patch
 import httpx
 import pytest
 
-from app.api.v1.schemas.candidates import (
+from app.ai_clipper.domain.candidates.models import (
     ConfidenceLabel,
     EditorialGoal,
     GenerationSettings,
 )
 from app.core.config import Settings
-from app.domain.transcript.models import TranscriptSegment, WordTiming
-from app.services.candidates.ranking import deduplicate_and_rank_candidates
-from app.services.llm.factory import get_llm_provider
-from app.services.llm.ollama_adapter import OllamaProvider, OllamaProviderError
-from app.services.llm.openai_adapter import OpenAIProvider
+from app.ai_clipper.domain.transcript.models import TranscriptSegment, WordTiming
+from app.ai_clipper.services.candidates.ranking import deduplicate_and_rank_candidates
+from app.ai_clipper.services.llm.factory import get_llm_provider
+from app.ai_clipper.services.llm.ollama_adapter import OllamaProvider, OllamaProviderError
+from app.ai_clipper.services.llm.openai_adapter import OpenAIProvider
 
 
 def sample_segments():

@@ -4,7 +4,7 @@ import pytest
 
 from pydantic import ValidationError
 
-from app.domain.timeline.models import (
+from app.ai_clipper.domain.timeline.models import (
     ClipTimeline,
     TimelineBoundsError,
     nested_child_local_to_source,
