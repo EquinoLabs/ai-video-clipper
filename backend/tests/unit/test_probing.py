@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 import pytest
 
-from app.services.media.probing import (
+from app.common.media.probing import (
     MediaProbeError,
     MissingMediaEngineError,
     NoAudioStreamError,

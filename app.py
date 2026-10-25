@@ -20,13 +20,13 @@ backend_dir = project_root / "backend"
 if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
-from app.api.v1.schemas.candidates import EditorialGoal
+from app.ai_clipper.domain.candidates.models import EditorialGoal
+from app.ai_clipper.services.media.caption_styles import get_caption_style, list_caption_styles
+from app.ai_clipper.services.pipeline.batch_runner import BatchSummary, process_batch_items
+from app.ai_clipper.services.pipeline.orchestrator import OrchestratorConfig
+from app.ai_clipper.services.storage.staging import discover_video_files_in_folder, is_supported_video_file
 from app.core.config import get_settings
 from app.core.logging import setup_logging
-from app.services.media.caption_styles import get_caption_style, list_caption_styles
-from app.services.pipeline.batch_runner import BatchSummary, process_batch_items
-from app.services.pipeline.orchestrator import OrchestratorConfig
-from app.services.storage.staging import discover_video_files_in_folder, is_supported_video_file
 
 logger = logging.getLogger("app.main_cli")
 

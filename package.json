@@ -1,0 +1,18 @@
+{
+  "name": "ai-video-clipper-monorepo",
+  "private": true,
+  "workspaces": [
+    "frontend/ai-clipper-ui",
+    "frontend/ai-animation-ui"
+  ],
+  "scripts": {
+    "dev:clipper": "npm run dev --workspace=@equinolabs/ai-clipper-ui",
+    "dev:animation": "npm run dev --workspace=@equinolabs/ai-animation-ui",
+    "build:clipper": "npm run build --workspace=@equinolabs/ai-clipper-ui",
+    "build:animation": "npm run build --workspace=@equinolabs/ai-animation-ui",
+    "build:all": "npm run build --workspaces",
+    "lint:clipper": "npm run lint --workspace=@equinolabs/ai-clipper-ui",
+    "lint:animation": "npm run lint --workspace=@equinolabs/ai-animation-ui",
+    "lint:all": "npm run lint --workspaces"
+  }
+}

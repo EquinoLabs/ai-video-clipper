@@ -4,8 +4,8 @@ import datetime
 from pathlib import Path
 import pytest
 
-from app.domain.ingestion.models import IngestionMetadata
-from app.services.storage.ingestion import (
+from app.ai_clipper.domain.ingestion.models import IngestionMetadata
+from app.ai_clipper.services.storage.ingestion import (
     compute_file_sha256,
     ingest_source_video,
     load_ingestion_metadata,

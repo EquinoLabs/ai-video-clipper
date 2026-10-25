@@ -84,7 +84,7 @@ cp .env.example .env
 Process a local video file (probe streams, extract 16 kHz mono WAV, transcribe with local Whisper, save normalized `transcript.json`):
 
 ```bash
-python -m app.cli.process_local path/to/video.mp4 -m tiny --keep-audio
+python -m app.ai_clipper.cli.process_local path/to/video.mp4 -m tiny --keep-audio
 ```
 
 Options:

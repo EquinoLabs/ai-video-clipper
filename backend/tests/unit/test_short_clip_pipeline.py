@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import pytest
 
-from app.api.v1.schemas.candidates import (
+from app.ai_clipper.domain.candidates.models import (
     ConfidenceLabel,
     EditorialGoal,
     EvidenceItem,
@@ -12,36 +12,36 @@ from app.api.v1.schemas.candidates import (
     LLMCandidateEvaluation,
     ScoreBreakdown,
 )
-from app.domain.manifest.models import (
+from app.ai_clipper.domain.manifest.models import (
     ClipFiles,
     ClipMetadata,
     ManifestLongClipItem,
     RunManifest,
     SourceVideoReference,
 )
-from app.domain.rendering.models import RenderValidationResult
-from app.domain.timeline.models import (
+from app.ai_clipper.domain.rendering.models import RenderValidationResult
+from app.ai_clipper.domain.timeline.models import (
     ClipTimeline,
     TimelineBoundsError,
     parent_local_to_source,
     source_to_parent_local,
 )
-from app.domain.transcript.models import (
+from app.ai_clipper.domain.transcript.models import (
     SourceMediaMetadata,
     TranscriptArtifact,
     TranscriptionRunMetadata,
     TranscriptSegment,
     WordTiming,
 )
-from app.services.candidates.short_package import (
+from app.ai_clipper.services.candidates.short_package import (
     LongMasterPackageError,
     validate_long_master_package,
 )
-from app.services.candidates.short_pipeline import run_short_clip_pipeline
-from app.services.llm.base import LLMProvider
-from app.services.rendering.short_clip_renderer import render_short_clip_package
-from app.services.storage.output_manager import OutputManager
-from app.services.transcription.slicing import (
+from app.ai_clipper.services.candidates.short_pipeline import run_short_clip_pipeline
+from app.ai_clipper.services.llm.base import LLMProvider
+from app.ai_clipper.services.rendering.short_clip_renderer import render_short_clip_package
+from app.ai_clipper.services.storage.output_manager import OutputManager
+from app.ai_clipper.services.transcription.slicing import (
     slice_transcript_for_long_clip,
     slice_transcript_for_short_clip,
 )
@@ -261,7 +261,7 @@ def test_render_short_clip_package_flow(mock_long_master_package, monkeypatch):
             has_audio=True,
         )
 
-    monkeypatch.setattr("app.services.rendering.short_clip_renderer.render_candidate_clip", mock_render)
+    monkeypatch.setattr("app.ai_clipper.services.rendering.short_clip_renderer.render_candidate_clip", mock_render)
 
     short_meta, manifest_item = render_short_clip_package(
         parent_clean_master_path=pkg.clean_master_path,
@@ -382,7 +382,7 @@ async def test_run_short_clip_pipeline_with_candidates(mock_long_master_package,
             has_audio=True,
         )
 
-    monkeypatch.setattr("app.services.rendering.short_clip_renderer.render_candidate_clip", mock_render)
+    monkeypatch.setattr("app.ai_clipper.services.rendering.short_clip_renderer.render_candidate_clip", mock_render)
 
     res = await run_short_clip_pipeline(
         long_clip_dir=long_dir,

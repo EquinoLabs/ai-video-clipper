@@ -170,11 +170,11 @@ The repository provides several specialized CLI tools and an interactive web int
 | Entry Point | Invocation Context | Primary Purpose | When to Use |
 | :--- | :--- | :--- | :--- |
 | **`app.py`** | Project root | Staging, batching, and full pipeline execution | **Primary Operator Tool**. Use for single video runs, folder batches, transcript reuse, and caption styling. |
-| **`app.cli.orchestrate`** | `cd backend` | Low-level Stage 4 orchestration | Advanced pipeline debugging, custom output directory targeting, or skipping rendering (`--no-render`). |
-| **`app.cli.render_clips`** | `cd backend` | Standalone vertical clip & caption rendering | Re-rendering existing candidate moments with different caption presets without rerunning LLM discovery. |
-| **`app.cli.process_short_clips`** | `cd backend` | Stage 3 short clips discovery | Generating short clips from an already generated long master package (`long_clips/clip_XX/`). |
-| **`app.cli.discover_candidates`** | `cd backend` | Stage 2 candidate discovery from transcript | Testing prompt variations, scoring, or candidate boundaries directly from a `transcript.json`. |
-| **`app.cli.process_local`** | `cd backend` | Stage 1 transcription & audio extraction | Transcribing a standalone video file to generate `transcript.json` without running candidate discovery. |
+| **`app.ai_clipper.cli.orchestrate`** | `cd backend` | Low-level Stage 4 orchestration | Advanced pipeline debugging, custom output directory targeting, or skipping rendering (`--no-render`). |
+| **`app.ai_clipper.cli.render_clips`** | `cd backend` | Standalone vertical clip & caption rendering | Re-rendering existing candidate moments with different caption presets without rerunning LLM discovery. |
+| **`app.ai_clipper.cli.process_short_clips`** | `cd backend` | Stage 3 short clips discovery | Generating short clips from an already generated long master package (`long_clips/clip_XX/`). |
+| **`app.ai_clipper.cli.discover_candidates`** | `cd backend` | Stage 2 candidate discovery from transcript | Testing prompt variations, scoring, or candidate boundaries directly from a `transcript.json`. |
+| **`app.ai_clipper.cli.process_local`** | `cd backend` | Stage 1 transcription & audio extraction | Transcribing a standalone video file to generate `transcript.json` without running candidate discovery. |
 | **`uvicorn app.main:app`** | Project root / `backend` | FastAPI backend server | Launching the local review API (`http://127.0.0.1:8000`). |
 | **`npm run dev`** | `frontend/` directory | React review client | Launching the local browser UI (`http://localhost:5173`). |
 
@@ -210,13 +210,13 @@ python app.py (--single VIDEO_FILE | --all FOLDER) [OPTIONS]
 
 ---
 
-### 4.2 `app.cli.render_clips` (Standalone Clip & Subtitle Renderer)
+### 4.2 `app.ai_clipper.cli.render_clips` (Standalone Clip & Subtitle Renderer)
 Use this tool to burn captions onto existing candidate moments or render specific candidate IDs without re-running transcription or candidate discovery.
 
 **Command Syntax:**
 ```powershell
 cd backend
-python -m app.cli.render_clips <SOURCE_VIDEO> --candidates <CANDIDATES_JSON> [OPTIONS]
+python -m app.ai_clipper.cli.render_clips <SOURCE_VIDEO> --candidates <CANDIDATES_JSON> [OPTIONS]
 ```
 
 **Options & Flags:**
@@ -236,13 +236,13 @@ python -m app.cli.render_clips <SOURCE_VIDEO> --candidates <CANDIDATES_JSON> [OP
 
 ---
 
-### 4.3 `app.cli.process_short_clips` (Stage 3 Short Discovery & Rendering)
+### 4.3 `app.ai_clipper.cli.process_short_clips` (Stage 3 Short Discovery & Rendering)
 Discovers and renders short clips from an existing long master package directory.
 
 **Command Syntax:**
 ```powershell
 cd backend
-python -m app.cli.process_short_clips <LONG_CLIP_DIR> [OPTIONS]
+python -m app.ai_clipper.cli.process_short_clips <LONG_CLIP_DIR> [OPTIONS]
 ```
 
 **Options & Flags:**
@@ -259,11 +259,11 @@ python -m app.cli.process_short_clips <LONG_CLIP_DIR> [OPTIONS]
 
 ---
 
-### 4.4 `app.cli.orchestrate` (Stage 4 Low-Level Orchestrator)
+### 4.4 `app.ai_clipper.cli.orchestrate` (Stage 4 Low-Level Orchestrator)
 **Command Syntax:**
 ```powershell
 cd backend
-python -m app.cli.orchestrate <SOURCE_VIDEO> [OPTIONS]
+python -m app.ai_clipper.cli.orchestrate <SOURCE_VIDEO> [OPTIONS]
 ```
 
 **Options & Flags:**
@@ -332,7 +332,7 @@ Without re-running transcription or discovery, re-render clips from an existing 
 
 ```powershell
 cd backend
-python -m app.cli.render_clips "outputs/2026-10-25/interview/run_001_143000/long_clips/clip_01/clip_01.mp4" --candidates "outputs/2026-10-25/interview/run_001_143000/short_clips/candidates.json" --transcript "outputs/2026-10-25/interview/run_001_143000/transcript.json" -o "outputs/2026-10-25/interview/run_001_143000/rendered_clips" --caption-style vibrant-yellow-box
+python -m app.ai_clipper.cli.render_clips "outputs/2026-10-25/interview/run_001_143000/long_clips/clip_01/clip_01.mp4" --candidates "outputs/2026-10-25/interview/run_001_143000/short_clips/candidates.json" --transcript "outputs/2026-10-25/interview/run_001_143000/transcript.json" -o "outputs/2026-10-25/interview/run_001_143000/rendered_clips" --caption-style vibrant-yellow-box
 ```
 
 ### Workflow 5: Render a Single Specific Candidate ID
@@ -340,7 +340,7 @@ Render only candidate `cnd_001` with `vibrant-green` captions:
 
 ```powershell
 cd backend
-python -m app.cli.render_clips "outputs/2026-10-25/interview/run_001_143000/long_clips/clip_01/clip_01.mp4" --candidates "outputs/2026-10-25/interview/run_001_143000/short_clips/candidates.json" --transcript "outputs/2026-10-25/interview/run_001_143000/transcript.json" --clip-id cnd_001 --caption-style vibrant-green
+python -m app.ai_clipper.cli.render_clips "outputs/2026-10-25/interview/run_001_143000/long_clips/clip_01/clip_01.mp4" --candidates "outputs/2026-10-25/interview/run_001_143000/short_clips/candidates.json" --transcript "outputs/2026-10-25/interview/run_001_143000/transcript.json" --clip-id cnd_001 --caption-style vibrant-green
 ```
 
 ### Workflow 6: Generate All 7 Caption Presets for a Video Clip
@@ -425,7 +425,7 @@ run_NNN_HHMMSS/
 
 | Symptom / Error Message | Root Cause | Exact Fix |
 | :--- | :--- | :--- |
-| **`ModuleNotFoundError: No module named 'app.api'`** | Running a backend CLI module (e.g. `python -m app.cli...`) from the workspace root where root `app.py` shadows the package. | Either execute `python app.py` (which configures `sys.path`), or `cd backend` before running `python -m app.cli.<module>`. |
+| **`ModuleNotFoundError: No module named 'app.api'`** | Running a backend CLI module (e.g. `python -m app.ai_clipper.cli...`) from the workspace root where root `app.py` shadows the package. | Either execute `python app.py` (which configures `sys.path`), or `cd backend` before running `python -m app.ai_clipper.cli.<module>`. |
 | **`Connection refused` or `httpx.ConnectError` during discovery** | Ollama background daemon is not running. | Run `ollama serve` in a terminal window or start the Ollama desktop service. |
 | **`model 'qwen2.5:7b' not found`** | The requested Ollama candidate discovery model has not been downloaded. | Run `ollama pull qwen2.5:7b` to download the model weights. |
 | **`ReadTimeout` or `TimeoutError` during Stage 2/3** | Candidate discovery inference took longer than the timeout threshold. | Increase timeout in `.env`: `OLLAMA_TIMEOUT_SECONDS=600.0` or pass `--timeout 600.0`. |
