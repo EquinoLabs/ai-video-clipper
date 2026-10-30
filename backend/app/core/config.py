@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     long_clip_preferred_max_seconds: float = 120.0
     long_clip_target_seconds: float = 90.0
     long_clip_max_seconds: float = 180.0
-    long_candidate_pool_target: int = 10
+    long_candidate_pool_target: int = 4
     long_candidate_display_limit: int = 10
     long_transcript_chunk_size: int = 1500
     long_transcript_chunk_overlap_seconds: float = 60.0
@@ -82,6 +82,10 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:7b"
     ollama_timeout_seconds: float = 300.0
+    ollama_num_predict: int = Field(
+        default=4096,
+        description="Maximum output tokens for Ollama candidate generation (bounded to avoid runaway generation)",
+    )
 
     # --- Visual Analysis (Phased) ---
     visual_frame_sample_interval_seconds: float = 2.0

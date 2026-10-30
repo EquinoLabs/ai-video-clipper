@@ -164,13 +164,13 @@ Ensure the following tools are installed on your machine:
 5. **Run the End-to-End Pipeline**:
    ```bash
    # Step 1: Ingest & transcribe local video
-   python -m app.ai_clipper.cli.process_local path/to/video.mp4 --keep-audio
+   python -m app.cli.process_local path/to/video.mp4 --keep-audio
 
    # Step 2: Discover & score viral candidate clips
-   python -m app.ai_clipper.cli.discover_candidates outputs/<run_dir>/transcript.json --goal overall
+   python -m app.cli.discover_candidates outputs/<run_dir>/transcript.json --goal overall
 
    # Step 3: Render 9:16 vertical clips with burned captions
-   python -m app.ai_clipper.cli.render_clips path/to/video.mp4 --candidates outputs/<run_dir>/candidates.json --transcript outputs/<run_dir>/transcript.json
+   python -m app.cli.render_clips path/to/video.mp4 --candidates outputs/<run_dir>/candidates.json --transcript outputs/<run_dir>/transcript.json
    ```
 
 6. **Start the API server**:

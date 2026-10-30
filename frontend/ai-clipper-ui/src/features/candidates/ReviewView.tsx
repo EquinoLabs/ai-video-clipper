@@ -195,11 +195,11 @@ export function ReviewView() {
         </p>
         <code className="code-snippet">
           # 1. Transcribe source video<br />
-          python -m app.ai_clipper.cli.process_local &lt;video.mp4&gt;<br /><br />
+          python -m app.cli.process_local &lt;video.mp4&gt;<br /><br />
           # 2. Discover viral candidates<br />
-          python -m app.ai_clipper.cli.discover_candidates outputs/&lt;run&gt;/transcript.json<br /><br />
+          python -m app.cli.discover_candidates outputs/&lt;run&gt;/transcript.json<br /><br />
           # 3. Render vertical 9:16 clips<br />
-          python -m app.ai_clipper.cli.render_clips &lt;video.mp4&gt; --candidates outputs/&lt;run&gt;/candidates.json --transcript outputs/&lt;run&gt;/transcript.json
+          python -m app.cli.render_clips &lt;video.mp4&gt; --candidates outputs/&lt;run&gt;/candidates.json --transcript outputs/&lt;run&gt;/transcript.json
         </code>
         <button className="btn-secondary" onClick={handleRefresh} style={{ marginTop: '1rem' }}>
           Scan Again
@@ -406,7 +406,7 @@ export function ReviewView() {
                       </p>
                       {activeCandidate && (
                         <code style={{ fontSize: '0.72rem', wordBreak: 'break-all', textAlign: 'left', marginTop: '0.5rem' }}>
-                          python -m app.ai_clipper.cli.render_clips &lt;source_video&gt; --candidates outputs/{selectedRunId}/candidates.json --transcript outputs/{selectedRunId}/transcript.json --clip-id {activeCandidate.id} --caption-style {selectedStyleId}
+                          python -m app.cli.render_clips &lt;source_video&gt; --candidates outputs/{selectedRunId}/candidates.json --transcript outputs/{selectedRunId}/transcript.json --clip-id {activeCandidate.id} --caption-style {selectedStyleId}
                         </code>
                       )}
                     </div>

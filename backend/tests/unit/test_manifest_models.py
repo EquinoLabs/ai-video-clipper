@@ -4,7 +4,7 @@ from pathlib import Path
 from pydantic import ValidationError
 import pytest
 
-from app.ai_clipper.domain.manifest.models import (
+from app.domain.manifest.models import (
     ClipFiles,
     ClipMetadata,
     ManifestLongClipItem,
@@ -12,8 +12,8 @@ from app.ai_clipper.domain.manifest.models import (
     RunManifest,
     SourceVideoReference,
 )
-from app.ai_clipper.domain.timeline.models import ClipTimeline
-from app.ai_clipper.services.storage.output_manager import OutputManager
+from app.domain.timeline.models import ClipTimeline
+from app.services.storage.output_manager import OutputManager
 
 
 def test_run_manifest_roundtrip_and_defaults():

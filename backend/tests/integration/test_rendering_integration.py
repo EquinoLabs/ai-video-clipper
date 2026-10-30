@@ -4,10 +4,10 @@ import subprocess
 from pathlib import Path
 import pytest
 
-from app.ai_clipper.domain.rendering.models import CaptionConfig, OutputConfig
-from app.ai_clipper.domain.transcript.models import TranscriptSegment, WordTiming
-from app.common.media.ffmpeg import check_ffmpeg_installed, check_ffprobe_installed
-from app.ai_clipper.services.media.rendering import (
+from app.domain.rendering.models import CaptionConfig, OutputConfig
+from app.domain.transcript.models import TranscriptSegment, WordTiming
+from app.services.media.ffmpeg import check_ffmpeg_installed, check_ffprobe_installed
+from app.services.media.rendering import (
     build_center_crop_filter,
     render_candidate_clip,
     validate_rendered_output,

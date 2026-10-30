@@ -1,11 +1,11 @@
-"""Unit tests for generic structured JSON generator (backend/app/common/llm/structured.py)."""
+"""Unit tests for generic structured JSON generator (backend/app/services/llm/structured.py)."""
 
 import json
 import pytest
 import httpx
 from pydantic import BaseModel, Field
 
-from app.common.llm.structured import (
+from app.services.llm.structured import (
     LLMCommunicationError,
     MalformedJSONError,
     SchemaValidationError,

@@ -6,17 +6,17 @@ from unittest.mock import AsyncMock, patch
 import httpx
 import pytest
 
-from app.ai_clipper.domain.candidates.models import (
+from app.domain.candidates.models import (
     ConfidenceLabel,
     EditorialGoal,
     GenerationSettings,
 )
 from app.core.config import Settings
-from app.ai_clipper.domain.transcript.models import TranscriptSegment, WordTiming
-from app.ai_clipper.services.candidates.ranking import deduplicate_and_rank_candidates
-from app.ai_clipper.services.llm.factory import get_llm_provider
-from app.ai_clipper.services.llm.ollama_adapter import OllamaProvider, OllamaProviderError
-from app.ai_clipper.services.llm.openai_adapter import OpenAIProvider
+from app.domain.transcript.models import TranscriptSegment, WordTiming
+from app.services.candidates.ranking import deduplicate_and_rank_candidates
+from app.services.llm.factory import get_llm_provider
+from app.services.llm.ollama_adapter import OllamaProvider, OllamaProviderError
+from app.services.llm.openai_adapter import OpenAIProvider
 
 
 def sample_segments():
@@ -717,3 +717,168 @@ def test_evidence_recovery_does_not_mutate_original_parsed_response():
     assert raw_payload["candidates"][0]["evidence"][1]["start_seconds"] == 30.0
     assert raw_payload["candidates"][0]["evidence"][1]["end_seconds"] == 25.0
 
+
+@pytest.mark.asyncio
+async def test_ollama_request_construction_includes_num_predict():
+    """Verify OllamaProvider includes configurable num_predict in options."""
+    mock_response = httpx.Response(
+        status_code=200,
+        content=json.dumps({
+            "model": "qwen2.5:7b",
+            "message": {
+                "role": "assistant",
+                "content": json.dumps(VALID_CANDIDATE_DATA),
+            },
+            "done": True,
+            "done_reason": "stop",
+        }),
+        request=httpx.Request("POST", "http://localhost:11434/api/chat"),
+    )
+
+    mock_client = AsyncMock(spec=httpx.AsyncClient)
+    mock_client.post.return_value = mock_response
+
+    provider = OllamaProvider(
+        num_predict=2048,
+        client=mock_client,
+    )
+
+    results = await provider.discover_and_evaluate(
+        transcript_segments=sample_segments(),
+        editorial_goal=EditorialGoal.EDUCATION,
+        settings=GenerationSettings(),
+        is_long_clip=True,
+    )
+
+    assert len(results) == 1
+    call_args = mock_client.post.call_args
+    json_body = call_args[1]["json"]
+    assert "options" in json_body
+    assert json_body["options"]["num_predict"] == 2048
+
+
+@pytest.mark.asyncio
+async def test_ollama_request_construction_enforces_schema_max_items():
+    """Verify OllamaProvider sets maxItems in JSON schema based on target_count."""
+    mock_response = httpx.Response(
+        status_code=200,
+        content=json.dumps({
+            "model": "qwen2.5:7b",
+            "message": {
+                "role": "assistant",
+                "content": json.dumps(VALID_CANDIDATE_DATA),
+            },
+            "done": True,
+        }),
+        request=httpx.Request("POST", "http://localhost:11434/api/chat"),
+    )
+
+    mock_client = AsyncMock(spec=httpx.AsyncClient)
+    mock_client.post.return_value = mock_response
+
+    provider = OllamaProvider(client=mock_client)
+
+    await provider.discover_and_evaluate(
+        transcript_segments=sample_segments(),
+        editorial_goal=EditorialGoal.HUMOR,
+        settings=GenerationSettings(),
+        target_count=4,
+        is_long_clip=True,
+    )
+
+    call_args = mock_client.post.call_args
+    json_body = call_args[1]["json"]
+    schema = json_body["format"]
+    assert schema["properties"]["candidates"]["maxItems"] == 4
+
+
+def test_ollama_response_clamped_to_target_count():
+    """Verify _sanitize_and_validate_response clamps candidate list to target_count."""
+    provider = OllamaProvider()
+    single_cand = VALID_CANDIDATE_DATA["candidates"][0]
+    multi_cand_data = {
+        "candidates": [
+            {**single_cand, "hook": f"Hook {i}"}
+            for i in range(10)
+        ]
+    }
+
+    results = provider._sanitize_and_validate_response(
+        parsed_raw=multi_cand_data,
+        is_long_clip=True,
+        target_count=3,
+    )
+
+    assert len(results) == 3
+    assert results[0].hook == "Hook 0"
+    assert results[2].hook == "Hook 2"
+
+
+@pytest.mark.asyncio
+async def test_ollama_handles_done_reason_length_with_incomplete_json():
+    """Verify that done_reason='length' with cut-off JSON raises OllamaProviderError."""
+    mock_response = httpx.Response(
+        status_code=200,
+        content=json.dumps({
+            "model": "qwen2.5:7b",
+            "message": {
+                "role": "assistant",
+                "content": '{"candidates": [{"hook": "Unfinished candidate", "start_sec',
+            },
+            "done": True,
+            "done_reason": "length",
+        }),
+        request=httpx.Request("POST", "http://localhost:11434/api/chat"),
+    )
+
+    mock_client = AsyncMock(spec=httpx.AsyncClient)
+    mock_client.post.return_value = mock_response
+
+    provider = OllamaProvider(num_predict=512, client=mock_client)
+
+    with pytest.raises(OllamaProviderError) as exc_info:
+        await provider.discover_and_evaluate(
+            transcript_segments=sample_segments(),
+            editorial_goal=EditorialGoal.HUMOR,
+            settings=GenerationSettings(),
+            is_long_clip=True,
+        )
+
+    err = str(exc_info.value)
+    assert "token limit" in err.lower()
+    assert "done_reason='length'" in err
+
+
+@pytest.mark.asyncio
+async def test_ollama_handles_done_reason_length_with_empty_content():
+    """Verify that done_reason='length' with empty message raises OllamaProviderError."""
+    mock_response = httpx.Response(
+        status_code=200,
+        content=json.dumps({
+            "model": "qwen2.5:7b",
+            "message": {
+                "role": "assistant",
+                "content": "",
+            },
+            "done": True,
+            "done_reason": "length",
+        }),
+        request=httpx.Request("POST", "http://localhost:11434/api/chat"),
+    )
+
+    mock_client = AsyncMock(spec=httpx.AsyncClient)
+    mock_client.post.return_value = mock_response
+
+    provider = OllamaProvider(num_predict=512, client=mock_client)
+
+    with pytest.raises(OllamaProviderError) as exc_info:
+        await provider.discover_and_evaluate(
+            transcript_segments=sample_segments(),
+            editorial_goal=EditorialGoal.HUMOR,
+            settings=GenerationSettings(),
+            is_long_clip=True,
+        )
+
+    err = str(exc_info.value)
+    assert "reached token limit" in err
+    assert "empty content" in err

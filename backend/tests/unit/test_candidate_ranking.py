@@ -4,7 +4,7 @@ import json
 import logging
 from pathlib import Path
 import pytest
-from app.ai_clipper.domain.candidates.models import (
+from app.domain.candidates.models import (
     CandidateArtifact,
     CandidateGenerationMetadata,
     ConfidenceLabel,
@@ -18,17 +18,17 @@ from app.ai_clipper.domain.candidates.models import (
     ValidationStatus,
     write_candidate_artifact,
 )
-from app.ai_clipper.domain.transcript.models import SourceMediaMetadata, TranscriptSegment, WordTiming
-from app.ai_clipper.services.candidates.ranking import (
+from app.domain.transcript.models import SourceMediaMetadata, TranscriptSegment, WordTiming
+from app.services.candidates.ranking import (
     RankingResult,
     compute_temporal_iou,
     deduplicate_and_rank_candidates,
 )
-from app.ai_clipper.services.candidates.validation import (
+from app.services.candidates.validation import (
     CandidateValidationResult,
     validate_candidate_against_transcript,
 )
-from app.ai_clipper.services.llm.prompts import build_system_prompt
+from app.services.llm.prompts import build_system_prompt
 
 
 @pytest.fixture

@@ -1,12 +1,12 @@
 """Architecture boundary enforcement and regression prevention tests.
 
 Enforces:
-- Rule A: Domain purity (domain modules must not import services, CLI, or API)
-- Rule B: Canonical Clipper imports (canonical Clipper code must not import legacy shims)
-- Rule C: Product isolation (Clipper and Animation Studio cannot cross-import)
-- Rule D: Shared infrastructure independence (common/core cannot import products)
-- Rule E: Central API composition (central router may compose, products cannot import router)
-- Rule F: Legacy compatibility-shim integrity (shims remain valid forwarding proxies)
+- Rule A: Domain Purity (app.domain must not import services, cli, or api)
+- Rule B: Core Independence (app.core must not import domain, services, cli, or api)
+- Rule C: Service Layer Independence (app.services must not import cli or api)
+- Rule D: Application Layer Direction (app.cli and app.api must not cross-import)
+- Rule E: Prohibited Retired Namespaces (no imports of app.ai_clipper or app.ai_animation)
+- Rule F: Root CLI Independence (root app.py must not import retired namespaces)
 """
 
 from __future__ import annotations
@@ -130,63 +130,36 @@ class ArchitectureBoundaryChecker:
     def _check_import(
         self, file_path: Path, src_mod: str, lineno: int, imp: str
     ) -> Optional[Violation]:
-        # Central API composition exemption:
-        # backend/app/api/v1/api.py is authorized to compose product routes.
-        if src_mod == "app.api.v1.api":
-            return None
+        # Rule E: Prohibited Retired Namespaces (app.ai_clipper and app.ai_animation)
+        for retired in ("app.ai_clipper", "app.ai_animation", "app.common"):
+            if self._matches_or_submodule(imp, retired):
+                return Violation(
+                    file_path=str(file_path),
+                    lineno=lineno,
+                    imported_module=imp,
+                    rule="Rule E: Prohibited Retired Namespaces",
+                    message=(
+                        f"Module '{src_mod}' imports retired namespace '{imp}'. "
+                        f"Use canonical top-level packages (app.domain, app.services, app.cli, app.api)."
+                    ),
+                )
 
-        # Root CLI entrypoint rule
-        # root.app (app.py) must not import legacy Clipper paths or Animation Studio.
+        # Rule F: Root CLI Independence
         if src_mod == "root.app":
-            for forbidden in ("app.domain", "app.services", "app.cli", "app.api"):
+            for forbidden in ("app.ai_clipper", "app.ai_animation", "app.common"):
                 if self._matches_or_submodule(imp, forbidden):
                     return Violation(
                         file_path=str(file_path),
                         lineno=lineno,
                         imported_module=imp,
-                        rule="Rule B: Canonical Clipper Imports (Root CLI)",
-                        message=(
-                            f"Root CLI '{src_mod}' cannot depend on legacy path '{imp}'. "
-                            f"Use canonical 'app.ai_clipper.*' imports."
-                        ),
+                        rule="Rule F: Root CLI Independence",
+                        message=f"Root CLI '{src_mod}' cannot import retired module '{imp}'.",
                     )
-            if self._matches_or_submodule(imp, "app.ai_animation"):
-                return Violation(
-                    file_path=str(file_path),
-                    lineno=lineno,
-                    imported_module=imp,
-                    rule="Rule C: Product Isolation (Root CLI)",
-                    message=f"Root CLI '{src_mod}' cannot import AI Animation module '{imp}'.",
-                )
 
-        # Rule E: Central API composition
-        # Product implementation packages must not import the central router back into themselves.
-        if self._matches_or_submodule(src_mod, "app.ai_clipper") or self._matches_or_submodule(
-            src_mod, "app.ai_animation"
-        ):
-            if self._matches_or_submodule(imp, "app.api.v1.api") or imp == "app.api.v1":
-                return Violation(
-                    file_path=str(file_path),
-                    lineno=lineno,
-                    imported_module=imp,
-                    rule="Rule E: Central API Composition",
-                    message=(
-                        f"Product module '{src_mod}' cannot import central router '{imp}'. "
-                        f"The central router composes products; products must not depend backward on central composition."
-                    ),
-                )
-
-        # Rule A: Domain purity
-        # app.ai_clipper.domain must not depend on services, cli, or api layers.
-        if self._matches_or_submodule(src_mod, "app.ai_clipper.domain"):
-            for forbidden in (
-                "app.ai_clipper.services",
-                "app.ai_clipper.cli",
-                "app.ai_clipper.api",
-                "app.services",
-                "app.cli",
-                "app.api",
-            ):
+        # Rule A: Domain Purity
+        # app.domain must not depend on services, cli, or api layers.
+        if self._matches_or_submodule(src_mod, "app.domain"):
+            for forbidden in ("app.services", "app.cli", "app.api"):
                 if self._matches_or_submodule(imp, forbidden):
                     return Violation(
                         file_path=str(file_path),
@@ -199,75 +172,58 @@ class ArchitectureBoundaryChecker:
                         ),
                     )
 
-        # Rule B: Canonical Clipper imports
-        # Canonical Clipper implementation code must not depend on legacy shims.
-        if self._matches_or_submodule(src_mod, "app.ai_clipper"):
+        # Rule B: Core Independence
+        # app.core must not depend on domain, services, cli, or api layers.
+        if self._matches_or_submodule(src_mod, "app.core"):
             for forbidden in ("app.domain", "app.services", "app.cli", "app.api"):
                 if self._matches_or_submodule(imp, forbidden):
                     return Violation(
                         file_path=str(file_path),
                         lineno=lineno,
                         imported_module=imp,
-                        rule="Rule B: Canonical Clipper Imports",
+                        rule="Rule B: Core Independence",
                         message=(
-                            f"Canonical Clipper module '{src_mod}' cannot depend on legacy path '{imp}'. "
-                            f"Use canonical 'app.ai_clipper.*' imports."
+                            f"Core module '{src_mod}' cannot import module '{imp}'. "
+                            f"Core configuration and utilities must remain foundational and independent."
                         ),
                     )
 
-        # Rule C: Product isolation
-        # Clipper must not import Animation, and Animation must not import Clipper.
-        if self._matches_or_submodule(src_mod, "app.ai_clipper"):
-            if self._matches_or_submodule(imp, "app.ai_animation"):
+        # Rule C: Service Layer Independence
+        # app.services must not depend on cli or api layers.
+        if self._matches_or_submodule(src_mod, "app.services"):
+            for forbidden in ("app.cli", "app.api"):
+                if self._matches_or_submodule(imp, forbidden):
+                    return Violation(
+                        file_path=str(file_path),
+                        lineno=lineno,
+                        imported_module=imp,
+                        rule="Rule C: Service Layer Independence",
+                        message=(
+                            f"Service module '{src_mod}' cannot import presentation module '{imp}'. "
+                            f"Services must not depend on CLI or API layers."
+                        ),
+                    )
+
+        # Rule D: Application Layer Direction
+        # app.cli cannot import app.api; app.api cannot import app.cli
+        if self._matches_or_submodule(src_mod, "app.cli"):
+            if self._matches_or_submodule(imp, "app.api"):
                 return Violation(
                     file_path=str(file_path),
                     lineno=lineno,
                     imported_module=imp,
-                    rule="Rule C: Product Isolation",
-                    message=(
-                        f"AI Clipper module '{src_mod}' cannot import AI Animation module '{imp}'. "
-                        f"Products must remain completely isolated."
-                    ),
+                    rule="Rule D: Application Layer Direction",
+                    message=f"CLI module '{src_mod}' cannot import API module '{imp}'.",
                 )
-
-        if self._matches_or_submodule(src_mod, "app.ai_animation"):
-            for forbidden in ("app.ai_clipper", "app.domain", "app.services", "app.cli"):
-                if self._matches_or_submodule(imp, forbidden):
-                    return Violation(
-                        file_path=str(file_path),
-                        lineno=lineno,
-                        imported_module=imp,
-                        rule="Rule C: Product Isolation",
-                        message=(
-                            f"AI Animation module '{src_mod}' cannot import AI Clipper module '{imp}'. "
-                            f"Products must remain completely isolated."
-                        ),
-                    )
-
-        # Rule D: Shared infrastructure independence
-        # app.common and app.core must not depend on product packages.
-        if self._matches_or_submodule(src_mod, "app.common") or self._matches_or_submodule(
-            src_mod, "app.core"
-        ):
-            for forbidden in (
-                "app.ai_clipper",
-                "app.ai_animation",
-                "app.domain",
-                "app.services",
-                "app.cli",
-                "app.api",
-            ):
-                if self._matches_or_submodule(imp, forbidden):
-                    return Violation(
-                        file_path=str(file_path),
-                        lineno=lineno,
-                        imported_module=imp,
-                        rule="Rule D: Shared Infrastructure Independence",
-                        message=(
-                            f"Shared infrastructure module '{src_mod}' cannot import product module '{imp}'. "
-                            f"Shared utilities must remain generic and independent of products."
-                        ),
-                    )
+        if self._matches_or_submodule(src_mod, "app.api"):
+            if self._matches_or_submodule(imp, "app.cli"):
+                return Violation(
+                    file_path=str(file_path),
+                    lineno=lineno,
+                    imported_module=imp,
+                    rule="Rule D: Application Layer Direction",
+                    message=f"API module '{src_mod}' cannot import CLI module '{imp}'.",
+                )
 
         return None
 
@@ -283,139 +239,104 @@ def checker() -> ArchitectureBoundaryChecker:
 
 def test_rule_a_valid_domain_to_domain_import(checker: ArchitectureBoundaryChecker):
     """Rule A: Domain modules may import other domain entities."""
-    src = "from app.ai_clipper.domain.timeline.models import TimeRange\n"
-    v = checker.check_source(
-        src, checker.app_dir / "ai_clipper" / "domain" / "candidates" / "models.py"
-    )
-    assert len(v) == 0
-
-
-def test_rule_a_prohibited_domain_to_service_import(checker: ArchitectureBoundaryChecker):
-    """Rule A: Domain modules must not import services."""
-    src = "from app.ai_clipper.services.storage.staging import StagingManager\n"
-    v = checker.check_source(
-        src, checker.app_dir / "ai_clipper" / "domain" / "candidates" / "scoring.py"
-    )
-    assert len(v) == 1
-    assert v[0].rule == "Rule A: Domain Purity"
-    assert "Domain module" in v[0].message
-    assert v[0].imported_module == "app.ai_clipper.services.storage.staging"
-
-
-def test_rule_a_prohibited_domain_to_legacy_service_import(checker: ArchitectureBoundaryChecker):
-    """Rule A: Domain modules must not import legacy services."""
-    src = "import app.services.pipeline.orchestrator\n"
-    v = checker.check_source(
-        src, checker.app_dir / "ai_clipper" / "domain" / "candidates" / "models.py"
-    )
-    assert len(v) == 1
-    assert v[0].rule == "Rule A: Domain Purity"
-
-
-def test_rule_b_prohibited_clipper_to_legacy_import(checker: ArchitectureBoundaryChecker):
-    """Rule B: Canonical Clipper code must not import legacy shims."""
-    src = "from app.domain.candidates.models import CandidateClip\n"
-    v = checker.check_source(
-        src, checker.app_dir / "ai_clipper" / "services" / "candidates" / "ranking.py"
-    )
-    assert len(v) == 1
-    assert v[0].rule == "Rule B: Canonical Clipper Imports"
-    assert "legacy path" in v[0].message
-
-
-def test_rule_c_prohibited_clipper_to_animation_import(checker: ArchitectureBoundaryChecker):
-    """Rule C: Clipper must not import Animation Studio."""
-    src = "from app.ai_animation.config import get_animation_settings\n"
-    v = checker.check_source(
-        src, checker.app_dir / "ai_clipper" / "services" / "pipeline" / "orchestrator.py"
-    )
-    assert len(v) == 1
-    assert v[0].rule == "Rule C: Product Isolation"
-    assert "cannot import AI Animation" in v[0].message
-
-
-def test_rule_c_prohibited_animation_to_clipper_import(checker: ArchitectureBoundaryChecker):
-    """Rule C: Animation Studio must not import Clipper."""
-    src = "from app.ai_clipper.services.rendering.short_clip_renderer import ShortClipRenderer\n"
-    v = checker.check_source(
-        src, checker.app_dir / "ai_animation" / "services" / "renderer.py"
-    )
-    assert len(v) == 1
-    assert v[0].rule == "Rule C: Product Isolation"
-    assert "cannot import AI Clipper" in v[0].message
-
-
-def test_rule_d_prohibited_common_to_product_import(checker: ArchitectureBoundaryChecker):
-    """Rule D: Shared infrastructure (common/core) must not import products."""
-    src = "from app.ai_clipper.services.media.ffmpeg import run_ffmpeg\n"
-    v = checker.check_source(
-        src, checker.app_dir / "common" / "media" / "probing.py"
-    )
-    assert len(v) == 1
-    assert v[0].rule == "Rule D: Shared Infrastructure Independence"
-    assert "cannot import product module" in v[0].message
-
-
-def test_rule_d_permitted_shared_imports(checker: ArchitectureBoundaryChecker):
-    """Rule D: Products are permitted to import shared common and core infrastructure."""
-    src = (
-        "from app.core.config import get_settings\n"
-        "from app.common.media.probing import probe_media_file\n"
-        "from app.common.llm.structured import generate_json\n"
-    )
-    # Both Clipper and Animation may import common/core
-    v_clipper = checker.check_source(
-        src, checker.app_dir / "ai_clipper" / "services" / "storage" / "staging.py"
-    )
-    assert len(v_clipper) == 0
-
-    v_anim = checker.check_source(
-        src, checker.app_dir / "ai_animation" / "services" / "stubs.py"
-    )
-    assert len(v_anim) == 0
-
-
-def test_rule_e_central_api_composition_permitted(checker: ArchitectureBoundaryChecker):
-    """Rule E: Central API composition is permitted to register both product routers."""
-    src = (
-        "from fastapi import APIRouter\n"
-        "from app.ai_clipper.api.routes import review\n"
-        "from app.ai_animation.api import routes as animation_routes\n"
-    )
-    v = checker.check_source(src, checker.app_dir / "api" / "v1" / "api.py")
-    assert len(v) == 0
-
-
-def test_rule_e_product_importing_central_api_prohibited(checker: ArchitectureBoundaryChecker):
-    """Rule E: Product modules cannot import back into central API composition."""
-    src = "from app.api.v1.api import api_router\n"
-    v = checker.check_source(
-        src, checker.app_dir / "ai_clipper" / "api" / "routes" / "review.py"
-    )
-    assert len(v) == 1
-    assert v[0].rule == "Rule E: Central API Composition"
-    assert "cannot import central router" in v[0].message
-
-
-def test_rule_f_legacy_shims_not_misclassified(checker: ArchitectureBoundaryChecker):
-    """Rule F: Legacy compatibility shims are allowed forwarding proxies outside ai_clipper."""
-    src = (
-        "import sys\n"
-        "from app.ai_clipper.domain.candidates import models as _impl\n"
-        "sys.modules[__name__] = _impl\n"
-    )
+    src = "from app.domain.timeline.models import TimeRange\n"
     v = checker.check_source(
         src, checker.app_dir / "domain" / "candidates" / "models.py"
     )
     assert len(v) == 0
 
 
+def test_rule_a_prohibited_domain_to_service_import(checker: ArchitectureBoundaryChecker):
+    """Rule A: Domain modules must not import services."""
+    src = "from app.services.storage.staging import StagingManager\n"
+    v = checker.check_source(
+        src, checker.app_dir / "domain" / "candidates" / "scoring.py"
+    )
+    assert len(v) == 1
+    assert v[0].rule == "Rule A: Domain Purity"
+    assert "Domain module" in v[0].message
+    assert v[0].imported_module == "app.services.storage.staging"
+
+
+def test_rule_b_prohibited_core_to_domain_import(checker: ArchitectureBoundaryChecker):
+    """Rule B: Core modules must not import domain."""
+    src = "from app.domain.candidates.models import CandidateClip\n"
+    v = checker.check_source(
+        src, checker.app_dir / "core" / "config.py"
+    )
+    assert len(v) == 1
+    assert v[0].rule == "Rule B: Core Independence"
+    assert "Core module" in v[0].message
+
+
+def test_rule_c_prohibited_service_to_cli_or_api_import(checker: ArchitectureBoundaryChecker):
+    """Rule C: Service modules must not import CLI or API."""
+    src_cli = "from app.cli.process_local import build_parser\n"
+    v_cli = checker.check_source(
+        src_cli, checker.app_dir / "services" / "candidates" / "ranking.py"
+    )
+    assert len(v_cli) == 1
+    assert v_cli[0].rule == "Rule C: Service Layer Independence"
+
+    src_api = "from app.api.v1.routes import review\n"
+    v_api = checker.check_source(
+        src_api, checker.app_dir / "services" / "pipeline" / "orchestrator.py"
+    )
+    assert len(v_api) == 1
+    assert v_api[0].rule == "Rule C: Service Layer Independence"
+
+
+def test_rule_d_prohibited_cli_to_api_cross_import(checker: ArchitectureBoundaryChecker):
+    """Rule D: CLI must not import API, and API must not import CLI."""
+    src_cli_to_api = "from app.api.v1.routes.review import router\n"
+    v1 = checker.check_source(
+        src_cli_to_api, checker.app_dir / "cli" / "orchestrate.py"
+    )
+    assert len(v1) == 1
+    assert v1[0].rule == "Rule D: Application Layer Direction"
+
+    src_api_to_cli = "from app.cli.orchestrate import run\n"
+    v2 = checker.check_source(
+        src_api_to_cli, checker.app_dir / "api" / "v1" / "routes" / "review.py"
+    )
+    assert len(v2) == 1
+    assert v2[0].rule == "Rule D: Application Layer Direction"
+
+
+def test_rule_e_prohibited_retired_namespaces(checker: ArchitectureBoundaryChecker):
+    """Rule E: Prohibit any import of app.ai_clipper or app.ai_animation or app.common."""
+    src = "from app.ai_clipper.domain.models import VideoMetadata\n"
+    v = checker.check_source(
+        src, checker.app_dir / "services" / "storage" / "staging.py"
+    )
+    assert len(v) == 1
+    assert v[0].rule == "Rule E: Prohibited Retired Namespaces"
+    assert "retired namespace" in v[0].message
+
+
+def test_rule_f_root_cli_uses_canonical_imports(checker: ArchitectureBoundaryChecker):
+    """Rule F: Root app.py entrypoint must have zero architectural violations using canonical imports."""
+    root_cli = checker.backend_dir.parent / "app.py"
+    assert root_cli.exists(), f"Root app.py not found at {root_cli}"
+    violations = checker.check_file(root_cli)
+    assert len(violations) == 0, f"Root CLI has violations: {violations}"
+
+
+def test_rule_f_root_cli_prohibits_retired_imports(checker: ArchitectureBoundaryChecker):
+    """Rule F: Root app.py must not import retired modules."""
+    root_cli = checker.backend_dir.parent / "app.py"
+    src = "from app.ai_clipper.services.pipeline.batch_runner import BatchSummary\n"
+    violations = checker.check_source(src, root_cli)
+    assert len(violations) >= 1
+    assert violations[0].imported_module == "app.ai_clipper.services.pipeline.batch_runner"
+
+
 def test_relative_imports_resolution(checker: ArchitectureBoundaryChecker):
-    """Relative imports within a product resolve correctly and detect violations."""
+    """Relative imports resolve correctly and detect boundary violations."""
     # Valid intra-package relative import
     src_valid = "from .base import StorageService\n"
     v_valid = checker.check_source(
-        src_valid, checker.app_dir / "ai_clipper" / "services" / "storage" / "staging.py"
+        src_valid, checker.app_dir / "services" / "storage" / "staging.py"
     )
     assert len(v_valid) == 0
 
@@ -423,67 +344,10 @@ def test_relative_imports_resolution(checker: ArchitectureBoundaryChecker):
     src_invalid_domain = "from ...services.storage import base\n"
     v_domain = checker.check_source(
         src_invalid_domain,
-        checker.app_dir / "ai_clipper" / "domain" / "candidates" / "scoring.py",
+        checker.app_dir / "domain" / "candidates" / "scoring.py",
     )
     assert len(v_domain) == 1
     assert v_domain[0].rule == "Rule A: Domain Purity"
-
-    # Prohibited relative import from Clipper crossing into Animation
-    src_cross = "from ....ai_animation import config\n"
-    v_cross = checker.check_source(
-        src_cross,
-        checker.app_dir / "ai_clipper" / "services" / "storage" / "staging.py",
-    )
-    assert len(v_cross) == 1
-    assert v_cross[0].rule == "Rule C: Product Isolation"
-
-
-def test_diagnostic_message_quality(checker: ArchitectureBoundaryChecker):
-    """Verify diagnostic message format includes file, line, rule, and message."""
-    src = "import app.services.storage.staging\n"
-    target_file = checker.app_dir / "ai_clipper" / "domain" / "candidates" / "models.py"
-    v = checker.check_source(src, target_file)
-    assert len(v) == 1
-    item = v[0]
-    assert item.lineno == 1
-    assert "Rule A" in item.rule
-    assert "app.services.storage.staging" in item.imported_module
-    assert str(target_file) in item.file_path
-    assert "Domain module" in item.message
-
-
-# ==============================================================================
-# Root CLI Entrypoint Boundary Tests
-# ==============================================================================
-
-def test_root_cli_uses_canonical_imports(checker: ArchitectureBoundaryChecker):
-    """Root app.py entrypoint must have zero architectural violations using canonical imports."""
-    root_cli = checker.backend_dir.parent / "app.py"
-    assert root_cli.exists(), f"Root app.py not found at {root_cli}"
-    violations = checker.check_file(root_cli)
-    assert len(violations) == 0, f"Root CLI has violations: {violations}"
-
-
-def test_root_cli_prohibits_legacy_imports(checker: ArchitectureBoundaryChecker):
-    """Root app.py must not import legacy compatibility shim modules."""
-    root_cli = checker.backend_dir.parent / "app.py"
-    src = "from app.services.pipeline.batch_runner import BatchSummary\n"
-    violations = checker.check_source(src, root_cli)
-    assert len(violations) == 1
-    assert "Rule B" in violations[0].rule
-    assert violations[0].imported_module == "app.services.pipeline.batch_runner"
-    assert "Root CLI" in violations[0].message
-
-
-def test_root_cli_prohibits_animation_imports(checker: ArchitectureBoundaryChecker):
-    """Root app.py is Clipper-only and must not import AI Animation Studio modules."""
-    root_cli = checker.backend_dir.parent / "app.py"
-    src = "from app.ai_animation.domain.models import AnimationJob\n"
-    violations = checker.check_source(src, root_cli)
-    assert len(violations) == 1
-    assert "Rule C" in violations[0].rule
-    assert violations[0].imported_module == "app.ai_animation.domain.models"
-    assert "AI Animation" in violations[0].message
 
 
 # ==============================================================================
@@ -500,27 +364,6 @@ def test_live_codebase_has_zero_architecture_violations(checker: ArchitectureBou
         )
         pytest.fail(f"Found {len(violations)} architectural boundary violation(s):\n{report}")
     assert len(violations) == 0
-
-
-# ==============================================================================
-# Legacy Compatibility Shim Integrity Tests
-# ==============================================================================
-
-def test_legacy_shim_module_identities():
-    """Verify representative legacy compatibility shims share module identity with canonical modules."""
-    import app.api.v1.schemas.candidates as legacy_schema
-    import app.ai_clipper.api.schemas.candidates as canonical_schema
-
-    assert legacy_schema is canonical_schema
-
-
-def test_legacy_shim_monkeypatch_bidirectional(monkeypatch):
-    """Verify monkeypatching a shim attribute is reflected on canonical module and vice versa."""
-    import app.api.v1.schemas.candidates as legacy_schema
-    import app.ai_clipper.api.schemas.candidates as canonical_schema
-
-    monkeypatch.setattr(legacy_schema, "_test_marker_stage5", "sentinel_value", raising=False)
-    assert getattr(canonical_schema, "_test_marker_stage5", None) == "sentinel_value"
 
 
 if __name__ == "__main__":

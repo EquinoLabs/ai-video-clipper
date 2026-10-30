@@ -1,8 +1,8 @@
 """Unit tests for domain candidate scoring logic."""
 
 import pytest
-from app.ai_clipper.domain.candidates.models import EditorialGoal, ScoreBreakdown
-from app.ai_clipper.domain.candidates.scoring import calculate_overall_score
+from app.domain.candidates.models import EditorialGoal, ScoreBreakdown
+from app.domain.candidates.scoring import calculate_overall_score
 
 
 def test_calculate_overall_score_perfect_ratings():

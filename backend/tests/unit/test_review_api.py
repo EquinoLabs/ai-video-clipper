@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app.ai_clipper.domain.candidates.models import (
+from app.domain.candidates.models import (
     CandidateArtifact,
     CandidateGenerationMetadata,
     CandidateListItem,
@@ -18,7 +18,7 @@ from app.ai_clipper.domain.candidates.models import (
     ValidationStatus,
     write_candidate_artifact,
 )
-from app.ai_clipper.domain.transcript.models import SourceMediaMetadata
+from app.domain.transcript.models import SourceMediaMetadata
 from app.main import app
 
 
@@ -38,7 +38,7 @@ def setup_test_run(tmp_path: Path, monkeypatch):
     rendered_dir.mkdir()
 
     # Monkeypatch OUTPUTS_BASE_DIR in review module
-    monkeypatch.setattr("app.ai_clipper.api.routes.review.OUTPUTS_BASE_DIR", fake_outputs)
+    monkeypatch.setattr("app.api.v1.routes.review.OUTPUTS_BASE_DIR", fake_outputs)
 
     # Create dummy rendered clip
     dummy_clip = rendered_dir / "cnd_001_10.0s_25.0s.mp4"

@@ -3,7 +3,7 @@
 from fastapi import APIRouter
 from app.api.v1.schemas.health import HealthResponse, SubsystemStatus
 from app.core.config import get_settings
-from app.common.media.ffmpeg import check_ffmpeg_installed, check_ffprobe_installed
+from app.services.media.ffmpeg import check_ffmpeg_installed, check_ffprobe_installed
 
 router = APIRouter(tags=["health"])
 

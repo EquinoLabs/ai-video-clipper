@@ -1,7 +1,7 @@
 """Unit tests verifying the standard API error response envelope."""
 
 import pytest
-from app.ai_clipper.domain.candidates.models import EvidenceItem, GenerationSettings
+from app.domain.candidates.models import EvidenceItem, GenerationSettings
 
 
 def test_evidence_item_rejects_reversed_timestamps():

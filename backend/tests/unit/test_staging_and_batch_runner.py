@@ -1,15 +1,16 @@
 """Unit tests for Stage 4 Input Staging and Batch Runner."""
 
 import json
+import uuid
 from pathlib import Path
 import pytest
 
-from app.ai_clipper.domain.candidates.models import EditorialGoal
-from app.common.media.probing import AudioStreamInfo, MediaProbeResult, VideoStreamInfo
-from app.ai_clipper.services.pipeline.batch_runner import BatchSummary, process_batch_items
-from app.ai_clipper.services.pipeline.orchestrator import OrchestratorConfig, OrchestratorResult
-from app.ai_clipper.services.storage.output_manager import OutputManager
-from app.ai_clipper.services.storage.staging import (
+from app.domain.candidates.models import EditorialGoal
+from app.services.media.probing import AudioStreamInfo, MediaProbeResult, VideoStreamInfo
+from app.services.pipeline.batch_runner import BatchSummary, process_batch_items
+from app.services.pipeline.orchestrator import OrchestratorConfig, OrchestratorResult
+from app.services.storage.output_manager import OutputManager
+from app.services.storage.staging import (
     is_supported_video_file,
     stage_input_video,
 )
@@ -66,7 +67,7 @@ def test_is_supported_video_file(tmp_path: Path):
 def test_stage_input_video_layout_and_deduplication(
     tmp_path: Path, mock_video_probe, monkeypatch
 ):
-    monkeypatch.setattr("app.ai_clipper.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
+    monkeypatch.setattr("app.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
 
     init_dir = tmp_path / "init_input"
     init_dir.mkdir()
@@ -83,7 +84,8 @@ def test_stage_input_video_layout_and_deduplication(
     assert res1.staged_path.exists()
     assert res1.staged_path.name == "anne_hathaway_interview.mp4"
     assert res1.staged_path.parent.name == res1.metadata.video_id
-    assert res1.metadata.video_id.startswith("vid_")
+    assert not res1.metadata.video_id.startswith("vid_")
+    assert uuid.UUID(res1.metadata.video_id)
     assert res1.metadata.original_filename == "Anne Hathaway Interview.mp4"
     assert res1.metadata.stored_filename == "anne_hathaway_interview.mp4"
     assert (res1.staged_path.parent / "metadata.json").exists()
@@ -138,7 +140,7 @@ def test_stage_input_video_rejects_empty_or_unsupported(tmp_path: Path):
 async def test_batch_runner_processes_folder_in_deterministic_order(
     tmp_path: Path, mock_video_probe, monkeypatch
 ):
-    monkeypatch.setattr("app.ai_clipper.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
+    monkeypatch.setattr("app.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
 
     # Mock orchestrator
     called_sources = []
@@ -165,7 +167,7 @@ async def test_batch_runner_processes_folder_in_deterministic_order(
         )
 
     monkeypatch.setattr(
-        "app.ai_clipper.services.pipeline.batch_runner.run_pipeline_orchestrator",
+        "app.services.pipeline.batch_runner.run_pipeline_orchestrator",
         mock_orchestrator,
     )
 
@@ -204,7 +206,7 @@ async def test_batch_runner_processes_folder_in_deterministic_order(
 async def test_batch_runner_isolates_failure_and_continues(
     tmp_path: Path, mock_video_probe, monkeypatch
 ):
-    monkeypatch.setattr("app.ai_clipper.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
+    monkeypatch.setattr("app.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
 
     # Mock orchestrator to fail for video 1, but succeed for video 2
     async def mock_orchestrator(**kwargs):
@@ -229,7 +231,7 @@ async def test_batch_runner_isolates_failure_and_continues(
         )
 
     monkeypatch.setattr(
-        "app.ai_clipper.services.pipeline.batch_runner.run_pipeline_orchestrator",
+        "app.services.pipeline.batch_runner.run_pipeline_orchestrator",
         mock_orchestrator,
     )
 
@@ -264,7 +266,7 @@ def test_cli_argument_parsing_and_ollama_propagation(monkeypatch):
     """Verify that CLI flags `--provider ollama --model qwen2.5:7b --final` are parsed and configured."""
     import sys
     from app.core.config import get_settings
-    from app.ai_clipper.services.pipeline.orchestrator import OrchestratorConfig
+    from app.services.pipeline.orchestrator import OrchestratorConfig
 
     test_args = [
         "app.py",
@@ -319,7 +321,7 @@ def test_cli_argument_parsing_and_ollama_propagation(monkeypatch):
 
 def test_discover_video_files_in_folder_ignores_json_and_handles_nested_hierarchy(tmp_path: Path):
     """Confirm recursive batch discovery discovers each video exactly once and ignores metadata JSONs."""
-    from app.ai_clipper.services.storage.staging import discover_video_files_in_folder
+    from app.services.storage.staging import discover_video_files_in_folder
 
     staging_dir = tmp_path / "input"
     staging_dir.mkdir()
@@ -367,7 +369,7 @@ async def test_batch_runner_single_video_transcript_forwarding(
     tmp_path: Path, mock_video_probe, monkeypatch
 ):
     """Verify process_batch_items forwards existing_transcript_path to the orchestrator for single-video runs."""
-    monkeypatch.setattr("app.ai_clipper.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
+    monkeypatch.setattr("app.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
 
     received_transcript_path = None
 
@@ -388,7 +390,7 @@ async def test_batch_runner_single_video_transcript_forwarding(
         )
 
     monkeypatch.setattr(
-        "app.ai_clipper.services.pipeline.batch_runner.run_pipeline_orchestrator",
+        "app.services.pipeline.batch_runner.run_pipeline_orchestrator",
         mock_orchestrator,
     )
 
@@ -421,7 +423,7 @@ async def test_batch_runner_backward_compatibility_no_transcript(
     tmp_path: Path, mock_video_probe, monkeypatch
 ):
     """Verify process_batch_items defaults to existing_transcript_path=None when omitted."""
-    monkeypatch.setattr("app.ai_clipper.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
+    monkeypatch.setattr("app.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
 
     received_transcript_path = "NOT_NONE"
 
@@ -441,7 +443,7 @@ async def test_batch_runner_backward_compatibility_no_transcript(
         )
 
     monkeypatch.setattr(
-        "app.ai_clipper.services.pipeline.batch_runner.run_pipeline_orchestrator",
+        "app.services.pipeline.batch_runner.run_pipeline_orchestrator",
         mock_orchestrator,
     )
 
@@ -596,7 +598,7 @@ def test_stable_video_id_and_cross_date_deduplication(
     tmp_path: Path, mock_video_probe, monkeypatch
 ):
     """Test 1, 2, 3, 4: Stable ID across dates, cross-date reuse, different filename reuse, and distinct IDs."""
-    monkeypatch.setattr("app.ai_clipper.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
+    monkeypatch.setattr("app.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
 
     input_dir = tmp_path / "input"
     input_dir.mkdir()
@@ -608,7 +610,7 @@ def test_stable_video_id_and_cross_date_deduplication(
     video_bytes = b"identical video content across dates 123456"
     older_video.write_bytes(video_bytes)
 
-    from app.ai_clipper.services.storage.ingestion import compute_file_sha256
+    from app.services.storage.ingestion import compute_file_sha256
     content_hash = compute_file_sha256(older_video)
 
     (older_date_dir / "metadata.json").write_text(
@@ -634,9 +636,11 @@ def test_stable_video_id_and_cross_date_deduplication(
 
     res = stage_input_video(new_source, input_root=input_dir)
     assert res.is_staged is True
-    # Reuses existing older staged file rather than duplicating
-    assert res.staged_path == older_video
-    assert res.metadata.video_id == "vid_6cf414fcdae21d2e"
+    # Date-scoped intake creates today's intake copy and preserves historical intake
+    assert res.staged_path != older_video
+    assert res.staged_path.exists()
+    assert older_video.exists()
+    assert uuid.UUID(res.metadata.video_id)
     assert res.metadata.content_sha256 == content_hash
 
     # 4: Different content gets distinct ID
@@ -653,7 +657,7 @@ def test_corrupt_or_inconsistent_existing_record_not_silently_reused(
     tmp_path: Path, mock_video_probe, monkeypatch
 ):
     """Test 6: Inconsistent hash or corrupted record is bypassed safely."""
-    monkeypatch.setattr("app.ai_clipper.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
+    monkeypatch.setattr("app.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
 
     input_dir = tmp_path / "input"
     input_dir.mkdir()
@@ -687,7 +691,7 @@ def test_corrupt_or_inconsistent_existing_record_not_silently_reused(
     real_source = tmp_path / "source.mp4"
     real_source.write_bytes(b"source bytes")
 
-    from app.ai_clipper.services.storage import staging as staging_mod
+    from app.services.storage import staging as staging_mod
 
     def mock_compute_hash(p: Path) -> str:
         if p == corrupt_video:
@@ -707,7 +711,7 @@ def test_corrupt_or_inconsistent_existing_record_not_silently_reused(
 
 def test_filename_normalization_comprehensive():
     """Test 7: snake_case, preserved extensions, punctuation, Unicode, empty stems, Windows reserved names."""
-    from app.ai_clipper.services.storage.ingestion import normalize_filename
+    from app.services.storage.ingestion import normalize_filename
 
     # Standard & punctuation
     assert normalize_filename("Anne Hathaway Forgets The Princess Diaries!.mp4") == "anne_hathaway_forgets_the_princess_diaries.mp4"
@@ -739,7 +743,7 @@ def test_filename_normalization_comprehensive():
 
 def test_legacy_video_and_flat_inputs_remain_discoverable(tmp_path: Path):
     """Test 10: Legacy video.<ext> records and flat inputs remain discoverable."""
-    from app.ai_clipper.services.storage.staging import discover_video_files_in_folder
+    from app.services.storage.staging import discover_video_files_in_folder
 
     staging_dir = tmp_path / "inputs"
     staging_dir.mkdir()
@@ -773,7 +777,7 @@ def test_legacy_video_and_flat_inputs_remain_discoverable(tmp_path: Path):
 
 def test_id_prefix_collision_handling(tmp_path: Path, mock_video_probe, monkeypatch):
     """Test 1: Prefix collision handling when two files share first 16 chars of SHA-256."""
-    monkeypatch.setattr("app.ai_clipper.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
+    monkeypatch.setattr("app.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
 
     input_dir = tmp_path / "input"
     input_dir.mkdir()
@@ -789,7 +793,7 @@ def test_id_prefix_collision_handling(tmp_path: Path, mock_video_probe, monkeypa
     src_b = tmp_path / "video_b.mp4"
     src_b.write_bytes(b"content b")
 
-    from app.ai_clipper.services.storage import staging as staging_mod
+    from app.services.storage import staging as staging_mod
 
     def mock_hash(p: Path) -> str:
         # Mock deterministic hash
@@ -822,7 +826,7 @@ def test_id_prefix_collision_handling(tmp_path: Path, mock_video_probe, monkeypa
 def test_concurrent_staging_of_identical_content(tmp_path: Path, mock_video_probe, monkeypatch):
     """Test 2: Concurrent staging of identical content from multiple threads."""
     import concurrent.futures
-    monkeypatch.setattr("app.ai_clipper.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
+    monkeypatch.setattr("app.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
 
     input_dir = tmp_path / "input"
     input_dir.mkdir()
@@ -859,7 +863,7 @@ def test_corrupt_or_incomplete_existing_records_are_not_silently_reused(
     tmp_path: Path, mock_video_probe, monkeypatch
 ):
     """Test 3: Missing media, invalid JSON metadata, or hash mismatch never silently reuses."""
-    monkeypatch.setattr("app.ai_clipper.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
+    monkeypatch.setattr("app.services.storage.staging.probe_media_file", lambda p: mock_video_probe)
 
     input_dir = tmp_path / "input"
     input_dir.mkdir()

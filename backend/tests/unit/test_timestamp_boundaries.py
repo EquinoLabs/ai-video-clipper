@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import List, Optional
 import pytest
 
-from app.ai_clipper.domain.transcript.models import TranscriptSegment, WordTiming
-from app.ai_clipper.services.transcription.base import TranscriptionProviderError
-from app.ai_clipper.services.transcription.faster_whisper_adapter import FasterWhisperAdapter
+from app.domain.transcript.models import TranscriptSegment, WordTiming
+from app.services.transcription.base import TranscriptionProviderError
+from app.services.transcription.faster_whisper_adapter import FasterWhisperAdapter
 
 
 class MockWhisperRawWord:

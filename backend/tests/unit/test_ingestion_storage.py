@@ -4,8 +4,9 @@ import datetime
 from pathlib import Path
 import pytest
 
-from app.ai_clipper.domain.ingestion.models import IngestionMetadata
-from app.ai_clipper.services.storage.ingestion import (
+from app.domain.ingestion.models import IngestionMetadata
+import uuid
+from app.services.storage.ingestion import (
     compute_file_sha256,
     ingest_source_video,
     load_ingestion_metadata,
@@ -83,7 +84,8 @@ def test_ingest_source_video_lifecycle(tmp_path: Path):
     assert dest_path.name == "jimmy_fallon_anne_hathaway_interview.mp4"
     assert dest_path.parent.name == "2026-10-24"
     assert metadata.schema_version == "v1.0"
-    assert metadata.video_id.startswith("vid_20261024_")
+    assert not metadata.video_id.startswith("vid_")
+    assert uuid.UUID(metadata.video_id)
     assert metadata.original_filename == "Jimmy Fallon & Anne Hathaway Interview.MP4"
     assert metadata.stored_filename == "jimmy_fallon_anne_hathaway_interview.mp4"
     assert metadata.ingestion_date == "2026-10-24"

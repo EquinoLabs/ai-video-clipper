@@ -3,15 +3,15 @@
 from pathlib import Path
 import pytest
 
-from app.ai_clipper.domain.rendering.models import CaptionConfig, OutputConfig
-from app.ai_clipper.domain.transcript.models import TranscriptSegment, WordTiming
-from app.ai_clipper.services.media.caption_styles import (
+from app.domain.rendering.models import CaptionConfig, OutputConfig
+from app.domain.transcript.models import TranscriptSegment, WordTiming
+from app.services.media.caption_styles import (
     DEFAULT_STYLE_ID,
     get_caption_style,
     list_caption_styles,
     resolve_caption_config,
 )
-from app.ai_clipper.services.media.subtitles import (
+from app.services.media.subtitles import (
     build_clip_cues,
     generate_ass_subtitle_content,
     generate_srt_subtitle_content,

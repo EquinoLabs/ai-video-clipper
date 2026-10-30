@@ -3,7 +3,7 @@
 from pathlib import Path
 import pytest
 
-from app.ai_clipper.services.transcription.faster_whisper_adapter import FasterWhisperAdapter
+from app.services.transcription.faster_whisper_adapter import FasterWhisperAdapter
 
 
 def test_real_faster_whisper_transcription():

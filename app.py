@@ -1,11 +1,14 @@
 """Main CLI entry point for AI Video Clipper.
 
-Supports staging and processing a single video or all videos in an input folder.
+Supports selecting source videos from authoritative init_input/ in three mutually
+exclusive modes: single video, selected list of videos, or all videos, then materializing
+into the date-scoped input/ YYYY-MM-DD/<source_video_uuid>/ hierarchy before processing.
 
 Usage:
-  python app.py --final --single "init_input/Anne Hathaway.mp4"
-  python app.py --final --single "init_input/Anne Hathaway.mp4" -t "outputs/.../transcript.json"
-  python app.py --final --all "init_input"
+  python app.py --final --single "Anne Hathaway Forgets The Princess Diaries...mp4"
+  python app.py --final --single "Anne Hathaway.mp4" -t "outputs/.../transcript.json"
+  python app.py --final --selected "clip1.mp4" "clip2.mp4"
+  python app.py --final --all
 """
 
 import argparse
@@ -20,11 +23,15 @@ backend_dir = project_root / "backend"
 if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
-from app.ai_clipper.domain.candidates.models import EditorialGoal
-from app.ai_clipper.services.media.caption_styles import get_caption_style, list_caption_styles
-from app.ai_clipper.services.pipeline.batch_runner import BatchSummary, process_batch_items
-from app.ai_clipper.services.pipeline.orchestrator import OrchestratorConfig
-from app.ai_clipper.services.storage.staging import discover_video_files_in_folder, is_supported_video_file
+from app.domain.candidates.models import EditorialGoal
+from app.services.media.caption_styles import get_caption_style, list_caption_styles
+from app.services.pipeline.batch_runner import BatchSummary, process_batch_items
+from app.services.pipeline.orchestrator import OrchestratorConfig
+from app.services.storage.staging import (
+    discover_video_files_in_folder,
+    is_supported_video_file,
+    resolve_source_videos,
+)
 from app.core.config import get_settings
 from app.core.logging import setup_logging
 
@@ -33,23 +40,39 @@ logger = logging.getLogger("app.main_cli")
 
 def main():
     parser = argparse.ArgumentParser(
-        description="AI Video Clipper — Stage 4 Staging & Batch Runner CLI"
+        description="AI Video Clipper — Source Selection & Batch Ingestion CLI"
     )
 
     mode_group = parser.add_mutually_exclusive_group(required=True)
     mode_group.add_argument(
         "--single",
-        type=Path,
-        metavar="VIDEO_FILE",
-        help="Path to a single source video file to stage and process.",
+        type=str,
+        metavar="VIDEO_SPEC",
+        help="Select one specified video from init_input/.",
+    )
+    mode_group.add_argument(
+        "--selected",
+        type=str,
+        nargs="+",
+        metavar="VIDEO_SPEC",
+        help="Select a specified list of videos from init_input/.",
     )
     mode_group.add_argument(
         "--all",
-        type=Path,
+        nargs="?",
+        const=True,
+        default=False,
         metavar="FOLDER",
-        help="Path to a directory of videos to stage and process sequentially.",
+        help="Select all eligible videos present in init_input/ (optional folder override).",
     )
 
+    parser.add_argument(
+        "--source-dir",
+        "--init-input",
+        type=Path,
+        default=Path("init_input"),
+        help="Authoritative source library directory (default: init_input/).",
+    )
     parser.add_argument(
         "-t",
         "--transcript",
@@ -95,7 +118,7 @@ def main():
         "--input-root",
         type=Path,
         default=Path("input"),
-        help="Managed input directory to stage copies into (default: input/).",
+        help="Managed date-scoped intake directory to stage copies into (default: input/).",
     )
     parser.add_argument(
         "--log-level",
@@ -115,9 +138,9 @@ def main():
     )
 
     # Validate batch mode and transcript combination
-    if args.all and args.transcript:
+    if (args.all or args.selected) and args.transcript:
         print(
-            "[ERROR] --transcript (-t) cannot be used with --all. "
+            "[ERROR] --transcript (-t) cannot be used with --all or multiple videos. "
             "A single transcript cannot be mapped to multiple batch videos.",
             file=sys.stderr,
         )
@@ -133,45 +156,44 @@ def main():
             print(f"[ERROR] Transcript path is not a file: {transcript_path}", file=sys.stderr)
             sys.exit(1)
 
-    # 1. Discover target video files
-    video_files = []
-    if args.single:
-        single_path = Path(args.single).resolve()
-        if not single_path.exists():
-            print(f"[ERROR] Source video not found: {single_path}", file=sys.stderr)
-            sys.exit(1)
-        video_files = [single_path]
-    elif args.all:
-        folder_path = Path(args.all).resolve()
-        if not folder_path.exists():
-            print(f"[ERROR] Source directory not found: {folder_path}", file=sys.stderr)
-            sys.exit(1)
-        if not folder_path.is_dir():
-            print(f"[ERROR] Path is not a directory: {folder_path}", file=sys.stderr)
-            sys.exit(1)
+    # 1. Discover target video files strictly from the authoritative source library
+    mode = "single" if args.single else ("selected" if args.selected else "all")
+    source_dir = Path(args.all) if isinstance(args.all, str) else Path(args.source_dir)
 
-        # Collect files in deterministic order, supporting both flat and nested hierarchies (ignoring metadata JSONs)
-        video_files = discover_video_files_in_folder(folder_path)
+    try:
+        video_files = resolve_source_videos(
+            init_input_dir=source_dir,
+            mode=mode,
+            single=args.single,
+            selected=args.selected,
+        )
+    except Exception as exc:
+        print(f"[ERROR] Source selection failed: {exc}", file=sys.stderr)
+        sys.exit(1)
 
-        if not video_files:
-            print(f"\n[INFO] Directory '{folder_path}' contains no video files. Nothing to process.")
-            sys.exit(0)
+    if not video_files:
+        print(f"\n[INFO] Directory '{source_dir}' contains no eligible video files. Nothing to process.")
+        sys.exit(0)
 
     print("\n" + "=" * 60)
     print("  AI Video Clipper — Batch Ingestion & Orchestration Runner")
     print("=" * 60)
-    print(f" Mode               : {'Single Video' if args.single else 'Folder Batch'}")
-    print(f" Target Path        : {args.single or args.all}")
+    print(f" Selection Mode     : {mode.upper()}")
+    print(f" Source Library     : {source_dir}")
+    if args.single:
+        print(f" Selected Target    : {args.single}")
+    elif args.selected:
+        print(f" Selected Targets   : {len(args.selected)} file(s)")
     if args.transcript:
         print(f" Reuse Transcript   : {args.transcript}")
-    print(f" Discovered Files   : {len(video_files)}")
+    print(f" Resolved Videos    : {len(video_files)}")
     print(f" Final Deliverables : {args.final} (burned subtitles: {args.final})")
     if args.final:
         selected_style = get_caption_style(args.caption_style)
         print(f" Caption Style      : {selected_style.display_name} ({selected_style.style_id})")
     print(f" Editorial Goal     : {args.goal}")
     print(f" LLM Provider       : {effective_provider} ({effective_model})")
-    print(f" Staging Directory  : {args.input_root}")
+    print(f" Intake Directory   : {args.input_root}")
     print("=" * 60 + "\n")
 
     resolved_caption_preset = get_caption_style(args.caption_style)
@@ -185,7 +207,7 @@ def main():
         caption_config=resolved_caption_preset.config,
     )
 
-    # 2. Execute sequential batch processing
+    # 2. Execute sequential batch processing with date-scoped materialization
     summary, exit_code = asyncio.run(
         process_batch_items(
             video_files=video_files,
@@ -211,7 +233,7 @@ def main():
         status_marker = "[OK]" if item.status == "completed" else ("[SKIP]" if item.status == "skipped" else "[FAIL]")
         print(f" {idx:02d}. {status_marker} {item.original_filename}")
         if item.staged_path:
-            print(f"     Staged Path : {item.staged_path}")
+            print(f"     Materialized: {item.staged_path}")
         if item.run_dir:
             print(f"     Run Folder  : {item.run_dir}")
             print(f"     Clips Ready : {item.long_clips_count} Long(s), {item.short_clips_count} Short(s)")

@@ -5,12 +5,12 @@ import subprocess
 from pathlib import Path
 import pytest
 
-from app.ai_clipper.domain.transcript.models import TranscriptSegment, WordTiming
-from app.ai_clipper.services.media.extraction import extract_audio_to_wav
-from app.common.media.ffmpeg import check_ffmpeg_installed, check_ffprobe_installed
-from app.common.media.probing import probe_media_file
-from app.ai_clipper.services.pipeline.local_pipeline import run_local_pipeline
-from app.ai_clipper.services.transcription.base import TranscriptionProvider, TranscriptionResult
+from app.domain.transcript.models import TranscriptSegment, WordTiming
+from app.services.media.extraction import extract_audio_to_wav
+from app.services.media.ffmpeg import check_ffmpeg_installed, check_ffprobe_installed
+from app.services.media.probing import probe_media_file
+from app.services.pipeline.local_pipeline import run_local_pipeline
+from app.services.transcription.base import TranscriptionProvider, TranscriptionResult
 
 ffmpeg_available, _ = check_ffmpeg_installed()
 ffprobe_available, _ = check_ffprobe_installed()

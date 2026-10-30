@@ -121,7 +121,7 @@ The core processing pipeline can be executed completely via CLI tools before or 
 Extracts 16 kHz mono speech, generates normalized segment and word-level timestamps clamped strictly to source duration, and persists `transcript.json`:
 
 ```powershell
-backend\.venv\Scripts\python -m app.ai_clipper.cli.process_local "path\to\interview.mp4" --keep-audio
+backend\.venv\Scripts\python -m app.cli.process_local "path\to\interview.mp4" --keep-audio
 ```
 
 **Key Parameters**:
@@ -140,10 +140,10 @@ Analyzes the transcript across editorial dimensions, identifies self-contained m
 
 ```powershell
 # Option A: Local Ollama model (no API key required)
-backend\.venv\Scripts\python -m app.ai_clipper.cli.discover_candidates "outputs\<run_folder>\transcript.json" -p ollama -g education
+backend\.venv\Scripts\python -m app.cli.discover_candidates "outputs\<run_folder>\transcript.json" -p ollama -g education
 
 # Option B: OpenAI provider (requires OPENAI_API_KEY)
-backend\.venv\Scripts\python -m app.ai_clipper.cli.discover_candidates "outputs\<run_folder>\transcript.json" -p openai -g overall
+backend\.venv\Scripts\python -m app.cli.discover_candidates "outputs\<run_folder>\transcript.json" -p openai -g overall
 ```
 
 **Key Parameters**:
@@ -165,10 +165,10 @@ Trims video boundaries, applies 9:16 center-crop framing (`1080x1920`), converts
 
 ```powershell
 # Render all candidates in the run:
-backend\.venv\Scripts\python -m app.ai_clipper.cli.render_clips "path\to\interview.mp4" --candidates "outputs\<run_folder>\candidates.json" --transcript "outputs\<run_folder>\transcript.json"
+backend\.venv\Scripts\python -m app.cli.render_clips "path\to\interview.mp4" --candidates "outputs\<run_folder>\candidates.json" --transcript "outputs\<run_folder>\transcript.json"
 
 # Or render a specific candidate ID:
-backend\.venv\Scripts\python -m app.ai_clipper.cli.render_clips "path\to\interview.mp4" --candidates "outputs\<run_folder>\candidates.json" --transcript "outputs\<run_folder>\transcript.json" --clip-id cnd_001
+backend\.venv\Scripts\python -m app.cli.render_clips "path\to\interview.mp4" --candidates "outputs\<run_folder>\candidates.json" --transcript "outputs\<run_folder>\transcript.json" --clip-id cnd_001
 ```
 
 *Output Artifacts*:
@@ -283,7 +283,7 @@ backend\.venv\Scripts\python.exe <command>
 ### Q3: Candidate discovery reports `OpenAI API key not configured`
 Ensure `OPENAI_API_KEY` is defined in `backend/.env` or passed via `--api-key`:
 ```powershell
-backend\.venv\Scripts\python -m app.ai_clipper.cli.discover_candidates outputs/<run>/transcript.json --api-key "sk-proj-..."
+backend\.venv\Scripts\python -m app.cli.discover_candidates outputs/<run>/transcript.json --api-key "sk-proj-..."
 ```
 
 ### Q4: Port 8000 or 5173 is already in use

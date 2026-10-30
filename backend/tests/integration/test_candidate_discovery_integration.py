@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 import pytest
-from app.ai_clipper.domain.candidates.models import (
+from app.domain.candidates.models import (
     CandidateArtifact,
     ConfidenceLabel,
     EditorialGoal,
@@ -11,14 +11,14 @@ from app.ai_clipper.domain.candidates.models import (
     LLMCandidateEvaluation,
     ScoreBreakdown,
 )
-from app.ai_clipper.cli.discover_candidates import run_candidate_discovery
-from app.ai_clipper.domain.transcript.models import (
+from app.services.candidates.discovery import run_candidate_discovery
+from app.domain.transcript.models import (
     SourceMediaMetadata,
     TranscriptArtifact,
     TranscriptionRunMetadata,
     TranscriptSegment,
 )
-from app.ai_clipper.services.llm.base import LLMProvider
+from app.services.llm.base import LLMProvider
 
 
 class MockLLMProvider(LLMProvider):
@@ -34,6 +34,7 @@ class MockLLMProvider(LLMProvider):
         settings,
         custom_instructions=None,
         target_count=None,
+        is_long_clip=False,
     ):
         return self.candidates_to_return
 
@@ -146,7 +147,7 @@ async def test_full_candidate_discovery_pipeline_with_mock_llm(mock_transcript_f
     ]
 
     mock_provider = MockLLMProvider(mock_candidates)
-    monkeypatch.setattr("app.ai_clipper.cli.discover_candidates.OpenAIProvider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr("app.services.candidates.discovery.get_llm_provider", lambda **kwargs: mock_provider)
 
     output_dir = tmp_path / "candidates_out"
     saved_path = await run_candidate_discovery(
@@ -194,6 +195,7 @@ async def test_multi_window_candidate_discovery_merging_and_deduplication(tmp_pa
             settings,
             custom_instructions=None,
             target_count=None,
+        is_long_clip=False,
         ):
             received_targets.append(target_count)
             # If this is window 1 (starts at 0.0), return candidate A at [0.0, 25.0]
@@ -322,10 +324,10 @@ async def test_multi_window_candidate_discovery_merging_and_deduplication(tmp_pa
     transcript_path.write_text(artifact.model_dump_json(indent=2), encoding="utf-8")
 
     mock_multi_provider = MultiWindowMockProvider()
-    monkeypatch.setattr("app.ai_clipper.cli.discover_candidates.OpenAIProvider", lambda **kwargs: mock_multi_provider)
+    monkeypatch.setattr("app.services.candidates.discovery.get_llm_provider", lambda **kwargs: mock_multi_provider)
     from app.core.config import get_settings
     fake_settings = get_settings().model_copy(update={"transcript_chunk_size": 15, "candidate_pool_target": 10})
-    monkeypatch.setattr("app.ai_clipper.cli.discover_candidates.get_settings", lambda: fake_settings)
+    monkeypatch.setattr("app.services.candidates.discovery.get_settings", lambda: fake_settings)
 
     out_dir = tmp_path / "multi_candidates_out"
     saved_path = await run_candidate_discovery(

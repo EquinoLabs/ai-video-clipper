@@ -4,7 +4,7 @@ import datetime
 from pathlib import Path
 import pytest
 
-from app.ai_clipper.services.storage.output_manager import OutputManager, IST
+from app.services.storage.output_manager import OutputManager, IST
 
 
 def test_get_run_directory_layout_and_collision(tmp_path: Path):

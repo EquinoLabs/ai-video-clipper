@@ -1,15 +1,12 @@
-"""Unit tests for shared common media infrastructure (ffmpeg and probing)."""
+"""Unit tests for media infrastructure (ffmpeg and probing)."""
 
 import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import pytest
 
-# Common media imports
-import app.common.media.ffmpeg as common_ffmpeg
-import app.common.media.probing as common_probing
-from app.common.media.ffmpeg import check_ffmpeg_installed, check_ffprobe_installed
-from app.common.media.probing import (
+from app.services.media.ffmpeg import check_ffmpeg_installed, check_ffprobe_installed
+from app.services.media.probing import (
     AudioStreamInfo,
     MediaProbeError,
     MediaProbeResult,
@@ -20,13 +17,9 @@ from app.common.media.probing import (
     probe_media_file,
 )
 
-# Legacy compatibility shim imports
-import app.services.media.ffmpeg as shim_ffmpeg
-import app.services.media.probing as shim_probing
-
 
 def test_ffmpeg_probing_symbols_availability():
-    """Verify all expected symbols are present in app.common.media."""
+    """Verify all expected symbols are present in app.services.media."""
     assert callable(check_ffmpeg_installed)
     assert callable(check_ffprobe_installed)
     assert callable(probe_media_file)
@@ -37,21 +30,6 @@ def test_ffmpeg_probing_symbols_availability():
     assert issubclass(MediaProbeError, Exception)
     assert issubclass(MissingMediaEngineError, MediaProbeError)
     assert issubclass(NoAudioStreamError, MediaProbeError)
-
-
-def test_compatibility_shims_identity():
-    """Verify compatibility shims re-export identical objects (class and function identity)."""
-    assert shim_ffmpeg.check_ffmpeg_installed is common_ffmpeg.check_ffmpeg_installed
-    assert shim_ffmpeg.check_ffprobe_installed is common_ffmpeg.check_ffprobe_installed
-
-    assert shim_probing.probe_media_file is common_probing.probe_media_file
-    assert shim_probing._parse_fps is common_probing._parse_fps
-    assert shim_probing.VideoStreamInfo is common_probing.VideoStreamInfo
-    assert shim_probing.AudioStreamInfo is common_probing.AudioStreamInfo
-    assert shim_probing.MediaProbeResult is common_probing.MediaProbeResult
-    assert shim_probing.MediaProbeError is common_probing.MediaProbeError
-    assert shim_probing.MissingMediaEngineError is common_probing.MissingMediaEngineError
-    assert shim_probing.NoAudioStreamError is common_probing.NoAudioStreamError
 
 
 def test_ffmpeg_check_installed_mocked():

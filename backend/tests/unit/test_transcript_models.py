@@ -3,7 +3,7 @@
 import json
 import pytest
 
-from app.ai_clipper.domain.transcript.models import (
+from app.domain.transcript.models import (
     SourceMediaMetadata,
     TranscriptArtifact,
     TranscriptionRunMetadata,

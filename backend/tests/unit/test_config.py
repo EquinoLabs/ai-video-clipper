@@ -5,11 +5,11 @@ from pathlib import Path
 from pydantic_settings import SettingsConfigDict
 import pytest
 
-from app.ai_clipper.domain.candidates.models import EditorialGoal
+from app.domain.candidates.models import EditorialGoal
 from app.core.config import Settings
-from app.ai_clipper.services.llm.factory import get_llm_provider
-from app.ai_clipper.services.llm.ollama_adapter import OllamaProvider
-from app.ai_clipper.services.pipeline.orchestrator import OrchestratorConfig
+from app.services.llm.factory import get_llm_provider
+from app.services.llm.ollama_adapter import OllamaProvider
+from app.services.pipeline.orchestrator import OrchestratorConfig
 
 
 def test_default_config_values():
@@ -22,6 +22,8 @@ def test_default_config_values():
     assert settings.clip_target_seconds == 30.0
     assert settings.clip_max_seconds == 60.0
     assert settings.candidate_pool_target == 10
+    assert settings.long_candidate_pool_target == 4
+    assert settings.long_candidate_display_limit == 10
     assert settings.candidate_display_limit == 10
     assert settings.transcript_chunk_size == 750
     assert settings.transcript_chunk_overlap_seconds == 45.0

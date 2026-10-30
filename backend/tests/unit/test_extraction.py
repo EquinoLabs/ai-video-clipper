@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 import pytest
 
-from app.ai_clipper.services.media.extraction import (
+from app.services.media.extraction import (
     AudioExtractionError,
     extract_audio_to_wav,
 )

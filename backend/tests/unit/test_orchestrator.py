@@ -4,22 +4,22 @@ import json
 from pathlib import Path
 import pytest
 
-from app.ai_clipper.domain.candidates.models import EditorialGoal
-from app.ai_clipper.domain.manifest.models import ManifestLongClipItem, ManifestShortClipItem, RunManifest
-from app.common.media.probing import AudioStreamInfo, MediaProbeResult, VideoStreamInfo
-from app.ai_clipper.domain.transcript.models import (
+from app.domain.candidates.models import EditorialGoal
+from app.domain.manifest.models import ManifestLongClipItem, ManifestShortClipItem, RunManifest
+from app.services.media.probing import AudioStreamInfo, MediaProbeResult, VideoStreamInfo
+from app.domain.transcript.models import (
     SourceMediaMetadata,
     TranscriptArtifact,
     TranscriptionRunMetadata,
     TranscriptSegment,
     WordTiming,
 )
-from app.ai_clipper.services.pipeline.orchestrator import (
+from app.services.pipeline.orchestrator import (
     OrchestratorConfig,
     OrchestratorResult,
     run_pipeline_orchestrator,
 )
-from app.ai_clipper.services.storage.output_manager import OutputManager
+from app.services.storage.output_manager import OutputManager
 
 
 @pytest.fixture
@@ -113,7 +113,7 @@ async def test_orchestrator_successful_flow_with_reused_transcript(
     mgr = OutputManager(output_root=out_root)
 
     # Mock probe
-    monkeypatch.setattr("app.ai_clipper.services.pipeline.orchestrator.probe_media_file", lambda p: mock_probe_result)
+    monkeypatch.setattr("app.services.pipeline.orchestrator.probe_media_file", lambda p: mock_probe_result)
 
     # Mock discover_and_render_long_clips
     async def mock_long_clips(*args, **kwargs):
@@ -156,15 +156,15 @@ async def test_orchestrator_successful_flow_with_reused_transcript(
         ]
 
     monkeypatch.setattr(
-        "app.ai_clipper.services.pipeline.orchestrator.discover_and_render_long_clips",
+        "app.services.pipeline.orchestrator.discover_and_render_long_clips",
         mock_long_clips,
     )
 
     # Mock run_short_clip_pipeline
-    from app.ai_clipper.services.candidates.short_pipeline import ShortPipelineResult
-    from app.ai_clipper.services.candidates.short_package import validate_long_master_package
-    from app.ai_clipper.domain.candidates.models import CandidateArtifact, CandidateGenerationMetadata
-    from app.ai_clipper.domain.candidates.models import GenerationSettings
+    from app.services.candidates.short_pipeline import ShortPipelineResult
+    from app.services.candidates.short_package import validate_long_master_package
+    from app.domain.candidates.models import CandidateArtifact, CandidateGenerationMetadata
+    from app.domain.candidates.models import GenerationSettings
 
     async def mock_short_pipeline(*args, **kwargs):
         long_dir = kwargs["long_clip_dir"]
@@ -205,7 +205,7 @@ async def test_orchestrator_successful_flow_with_reused_transcript(
         )
 
     monkeypatch.setattr(
-        "app.ai_clipper.services.pipeline.orchestrator.run_short_clip_pipeline",
+        "app.services.pipeline.orchestrator.run_short_clip_pipeline",
         mock_short_pipeline,
     )
 
@@ -248,14 +248,14 @@ async def test_orchestrator_valid_zero_long_clips(
     out_root = tmp_path / "outputs"
     mgr = OutputManager(output_root=out_root)
 
-    monkeypatch.setattr("app.ai_clipper.services.pipeline.orchestrator.probe_media_file", lambda p: mock_probe_result)
+    monkeypatch.setattr("app.services.pipeline.orchestrator.probe_media_file", lambda p: mock_probe_result)
 
     # Mock long discovery returning 0 long clips (valid empty discovery)
     async def mock_zero_long_clips(*args, **kwargs):
         return []
 
     monkeypatch.setattr(
-        "app.ai_clipper.services.pipeline.orchestrator.discover_and_render_long_clips",
+        "app.services.pipeline.orchestrator.discover_and_render_long_clips",
         mock_zero_long_clips,
     )
 
@@ -293,14 +293,14 @@ async def test_orchestrator_stage_failure_marks_active_stage_as_failed(
     out_root = tmp_path / "outputs"
     mgr = OutputManager(output_root=out_root)
 
-    monkeypatch.setattr("app.ai_clipper.services.pipeline.orchestrator.probe_media_file", lambda p: mock_probe_result)
+    monkeypatch.setattr("app.services.pipeline.orchestrator.probe_media_file", lambda p: mock_probe_result)
 
     # Mock long discovery raising an exception (e.g. OpenAIProviderError)
     async def mock_failing_long_clips(*args, **kwargs):
         raise RuntimeError("OpenAI API key not configured. Set OPENAI_API_KEY in environment or .env.")
 
     monkeypatch.setattr(
-        "app.ai_clipper.services.pipeline.orchestrator.discover_and_render_long_clips",
+        "app.services.pipeline.orchestrator.discover_and_render_long_clips",
         mock_failing_long_clips,
     )
 
